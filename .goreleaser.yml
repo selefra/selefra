@@ -1,0 +1,42 @@
+project_name: selefra
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      #- windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+    id: "selefra"
+    binary:
+      'selefra'
+archives:
+  - files:
+    - none*
+    format: zip
+    id: homebrew
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+    - goos: linux
+      format: tar.gz
+
+brews:
+  -
+    ids:
+      - homebrew
+    name: selefra
+    tap:
+      owner: selefra
+      name: homebrew-tap
+      branch: main
+    folder: Formula
+    url_template: "https://github.com/selefra/selefra/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://selefra.io/"
+    description: "Selefra - Infrastructure as Code for Infrastructure Analysis."
+    skip_upload: auto
+    install: |-
+      bin.install "selefra"
+
+
