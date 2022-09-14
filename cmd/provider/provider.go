@@ -11,7 +11,7 @@ func NewProviderCmd() *cobra.Command {
 		Long:  "provider",
 	}
 
-	cmd.AddCommand(newCmdProviderUpdate(), newCmdProviderDelete(), newCmdProviderList())
+	cmd.AddCommand(newCmdProviderUpdate(), newCmdProviderDelete(), newCmdProviderList(), newCmdProviderInstall())
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd

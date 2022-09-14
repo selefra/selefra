@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	utils2 "github.com/selefra/selefra/cmd/utils"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -148,8 +149,8 @@ func CreateYaml(ctx context.Context) error {
 			return nil
 		}
 		ui.PrintSuccessF("Synchronization %s@%s's config successful", p.Name, p.Version)
-		SetSelefraProvider(p, &configYaml)
-		err = SetProviders(res.DefaultConfigTemplate, p, &configYaml)
+		utils2.SetSelefraProvider(p, &configYaml)
+		err = utils2.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
 		if err != nil {
 			ui.PrintErrorF("set %s@%s's config failed：%s", p.Name, p.Version, err.Error())
 			return nil

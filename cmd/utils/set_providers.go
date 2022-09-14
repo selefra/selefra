@@ -1,4 +1,4 @@
-package init
+package utils
 
 import (
 	"github.com/selefra/selefra/config"
@@ -14,7 +14,11 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 	yaml.Unmarshal([]byte(DefaultConfigTemplate), &node)
 
 	var provNode yaml.Node
-
+	for _, Node := range config.Providers.Content {
+		if Node.Kind == yaml.ScalarNode && Node.Value == provider.Name {
+			return nil
+		}
+	}
 	provNode.Content = append([]*yaml.Node{
 		{
 			Kind:  yaml.ScalarNode,

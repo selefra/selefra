@@ -426,6 +426,20 @@ func checkCycle(cyclePathMap map[string][]string, path string, pathList []string
 	return false
 }
 
+func GetConfigPath() (string, error) {
+
+	configMap, err := readAllConfig(*global.WORKSPACE, nil)
+	if err != nil {
+		return "", err
+	}
+
+	clientMap := configMap[SELEFRA]
+	for path, _ := range clientMap {
+		return path, nil
+	}
+	return "", errors.New("No config file found")
+}
+
 func (c *SelefraConfig) GetConfigByNode() error {
 
 	configMap, err := readAllConfig(*global.WORKSPACE, nil)
