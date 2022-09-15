@@ -16,7 +16,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 func NewFetchCmd() *cobra.Command {
@@ -29,8 +28,7 @@ func NewFetchCmd() *cobra.Command {
 			var cof = &config.SelefraConfig{}
 
 			wd, err := os.Getwd()
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 			err = cof.GetConfig()
 			if err != nil {
 				return err

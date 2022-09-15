@@ -16,7 +16,6 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 	}
 	var node yaml.Node
 	yaml.Unmarshal([]byte(DefaultConfigTemplate), &node)
-
 	var provNode yaml.Node
 	provNode.Content = append([]*yaml.Node{
 		{

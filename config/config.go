@@ -70,6 +70,7 @@ type Module struct {
 }
 
 type Config struct {
+	Name       string              `yaml:"name" mapstructure:"name"`
 	CliVersion string              `yaml:"cli_version" mapstructure:"cli_version"`
 	Providers  []*ProviderRequired `yaml:"providers" mapstructure:"providers"`
 	Connection *DB                 `yaml:"connection" mapstructure:"connection"`

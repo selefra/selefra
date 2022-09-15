@@ -7,7 +7,6 @@ import (
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 func newCmdProviderDelete() *cobra.Command {
@@ -22,8 +21,7 @@ func newCmdProviderDelete() *cobra.Command {
 			}
 
 			wd, err := os.Getwd()
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 			var providers []*config.ProviderRequired
 
 			var cof = &config.SelefraConfig{}
@@ -61,7 +59,6 @@ func newCmdProviderDelete() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }

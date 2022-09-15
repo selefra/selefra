@@ -36,7 +36,6 @@ func NewInitCmd() *cobra.Command {
 		Long:  "Prepare your working directory for other commands",
 		RunE:  initFunc,
 	}
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.PersistentFlags().BoolP("force", "f", false, "force overwriting the directory if it is not empty")
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
@@ -93,7 +92,24 @@ func CreateYaml(ctx context.Context) error {
 		return nil
 	}
 	provs := term.SelectProviders(prov)
+	if len(provs) == 0 {
+		ui.PrintWarningLn("No provider selected or user canceled.")
+		return nil
+	}
+	initHeaderOutput(provs)
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("project name:(%s)", filepath.Base(*global.WORKSPACE))
+	projectName, err := reader.ReadString('\n')
+	if err != nil {
+		return nil
+	}
+	projectName = strings.TrimSpace(strings.Replace(projectName, "\n", "", -1))
+	if projectName == "" {
+		projectName = filepath.Base(*global.WORKSPACE)
+	}
+	configYaml.Selefra.Name = projectName
 	ui.PrintInfoLn("Initializing Selefra provider plugin...")
+
 	namespace, _, err := utils.Home()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
@@ -109,15 +125,15 @@ func CreateYaml(ctx context.Context) error {
 		}
 		p, err := provider.Download(ctx, pr, true)
 		if err != nil {
-			ui.PrintErrorF("Installed %s@%s failed：%s", p.Name, p.Version, err.Error())
+			ui.PrintErrorF("	Installed %s@%s failed：%s", p.Name, p.Version, err.Error())
 			return nil
 		} else {
-			ui.PrintSuccessF("Installed %s@%s verified", p.Name, p.Version)
+			ui.PrintSuccessF("	Installed %s@%s verified", p.Name, p.Version)
 		}
-		ui.PrintInfoF("Synchronization %s@%s's config...", p.Name, p.Version)
+		ui.PrintInfoF("	Synchronization %s@%s's config...", p.Name, p.Version)
 		plug, err := plugin.NewManagedPlugin(p.Filepath, p.Name, p.Version, "", nil)
 		if err != nil {
-			ui.PrintErrorF("Synchronization %s@%s's config failed：%s", p.Name, p.Version, err.Error())
+			ui.PrintErrorF("	Synchronization %s@%s's config failed：%s", p.Name, p.Version, err.Error())
 			return nil
 		}
 
@@ -145,10 +161,10 @@ func CreateYaml(ctx context.Context) error {
 
 		res, err := plugProvider.GetProviderInformation(ctx, &shard.GetProviderInformationRequest{})
 		if err != nil {
-			ui.PrintErrorF("Synchronization %s@%s's config failed：%s", p.Name, p.Version, err.Error())
+			ui.PrintErrorF("	Synchronization %s@%s's config failed：%s", p.Name, p.Version, err.Error())
 			return nil
 		}
-		ui.PrintSuccessF("Synchronization %s@%s's config successful", p.Name, p.Version)
+		ui.PrintSuccessF("	Synchronization %s@%s's config successful", p.Name, p.Version)
 		utils2.SetSelefraProvider(p, &configYaml)
 		err = utils2.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
 		if err != nil {
@@ -187,8 +203,12 @@ func CreateYaml(ctx context.Context) error {
 	ui.PrintSuccessF(`
 Selefra has been successfully initialized! 
 	
-Configuration generated successfully to %s
-	`, *global.WORKSPACE)
+Your new Selefra project "%s" was created!
+
+To perform an initial analysis, run selefra apply
+
+Need help? Please read Selefra Docs: https://selefra.io/docs
+	`, projectName)
 
 	return nil
 }
@@ -197,7 +217,10 @@ func initFunc(cmd *cobra.Command, args []string) error {
 
 	wd, err := os.Getwd()
 	force, _ := cmd.PersistentFlags().GetBool("force")
-	dirname, _ := cmd.PersistentFlags().GetString("dir")
+	dirname := "."
+	if len(args) > 0 {
+		dirname = args[0]
+	}
 	*global.WORKSPACE = filepath.Join(wd, dirname)
 
 	_, err = os.Stat(*global.WORKSPACE)
@@ -215,12 +238,13 @@ func initFunc(cmd *cobra.Command, args []string) error {
 	_, clientErr := config.GetClientStr()
 	if !errors.Is(clientErr, config.NoClient) {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("error:%s is already init. Continue and overwrite it?[Y/N]\n", *global.WORKSPACE)
+		fmt.Printf("Error:%s is already init. Continue and overwrite it?[Y/N]\n", *global.WORKSPACE)
 		text, err := reader.ReadString('\n')
+		text = strings.TrimSpace(strings.ToLower(text))
 		if err != nil {
 			return nil
 		}
-		if text == "Y\n" || text == "y\n" {
+		if text == "y" {
 			err = CreateYaml(cmd.Context())
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
@@ -235,4 +259,8 @@ func initFunc(cmd *cobra.Command, args []string) error {
 	}
 	CreateYaml(cmd.Context())
 	return nil
+}
+
+type name[T any] struct {
+	FAN []T
 }

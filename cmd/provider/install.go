@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -32,8 +31,7 @@ func newCmdProviderInstall() *cobra.Command {
 				ui.PrintErrorLn("Error:" + err.Error())
 				return nil
 			}
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 			namespace, _, err := utils.Home()
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
@@ -153,7 +151,6 @@ func newCmdProviderInstall() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }

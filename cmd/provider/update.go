@@ -8,7 +8,6 @@ import (
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 func newCmdProviderUpdate() *cobra.Command {
@@ -19,8 +18,7 @@ func newCmdProviderUpdate() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			wd, err := os.Getwd()
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 			argsMap := make(map[string]bool)
 			for i := range args {
 				argsMap[args[i]] = true
@@ -64,7 +62,6 @@ func newCmdProviderUpdate() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }

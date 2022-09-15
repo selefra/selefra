@@ -26,7 +26,6 @@ func NewApplyCmd() *cobra.Command {
 		RunE:  applyFunc,
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }
@@ -34,8 +33,7 @@ func NewApplyCmd() *cobra.Command {
 func applyFunc(cmd *cobra.Command, args []string) error {
 
 	wd, err := os.Getwd()
-	dirname, _ := cmd.PersistentFlags().GetString("dir")
-	*global.WORKSPACE = filepath.Join(wd, dirname)
+	*global.WORKSPACE = wd
 	ctx := cmd.Context()
 	uid, _ := uuid.NewUUID()
 	err = provider.Sync()

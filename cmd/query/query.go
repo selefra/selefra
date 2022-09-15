@@ -11,7 +11,6 @@ import (
 	"github.com/selefra/selefra/ui/table"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -25,8 +24,7 @@ func NewQueryCmd() *cobra.Command {
 			ui.PrintWarningLn("Please select table.")
 			var cof = &config.SelefraConfig{}
 			wd, err := os.Getwd()
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 			err = cof.GetConfig()
 			if err != nil {
 				ui.PrintErrorLn(err)

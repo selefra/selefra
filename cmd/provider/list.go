@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path/filepath"
 )
 
 func newCmdProviderList() *cobra.Command {
@@ -22,8 +21,7 @@ func newCmdProviderList() *cobra.Command {
 				ui.PrintErrorLn("Error:" + err.Error())
 				return nil
 			}
-			dirname, _ := cmd.PersistentFlags().GetString("dir")
-			*global.WORKSPACE = filepath.Join(wd, dirname)
+			*global.WORKSPACE = wd
 
 			b, err := config.GetClientStr()
 			if err != nil {
@@ -44,7 +42,6 @@ func newCmdProviderList() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }

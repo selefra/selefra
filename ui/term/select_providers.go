@@ -17,9 +17,9 @@ func showProviders(providers []string, selectProviders []string) []string {
 			}
 		}
 		if flag {
-			res = append(res, "[*] "+provider)
+			res = append(res, provider+" [✔] ")
 		} else {
-			res = append(res, "[ ] "+provider)
+			res = append(res, provider+" [ ] ")
 		}
 	}
 	return res
@@ -45,7 +45,7 @@ func SelectProviders(providers []string) []string {
 	l.BorderTop = false
 	l.BorderBottom = false
 	l.SelectedRowStyle = ui.NewStyle(ui.ColorRed)
-	l.SetRect(0, 0, 200, 10)
+	l.SetRect(0, 0, 800, 10)
 
 	ui.Render(l)
 
@@ -70,6 +70,8 @@ func SelectProviders(providers []string) []string {
 				continue
 			}
 			l.ScrollHalfPageDown()
+		case "<C-c>":
+			return []string{}
 		case "<C-u>":
 			if len(l.Rows) == 0 {
 				continue

@@ -17,7 +17,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path/filepath"
 )
 
 func NewTestCmd() *cobra.Command {
@@ -28,8 +27,6 @@ func NewTestCmd() *cobra.Command {
 		RunE:  testFunc,
 	}
 
-	cmd.PersistentFlags().StringP("dir", "d", ".", "the directory to initialize in")
-
 	cmd.SetHelpFunc(cmd.HelpFunc())
 
 	return cmd
@@ -39,8 +36,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	wd, err := os.Getwd()
-	dirname, _ := cmd.PersistentFlags().GetString("dir")
-	*global.WORKSPACE = filepath.Join(wd, dirname)
+	*global.WORKSPACE = wd
 	s := config.SelefraConfig{}
 	err = s.GetConfigByNode()
 	if err != nil {
@@ -126,6 +122,10 @@ func checkConfig(ctx context.Context, c config.SelefraConfig) error {
 	var err error
 	if c.Selefra.CliVersion == "" {
 		err = errors.New("cliVersion is empty")
+		return err
+	}
+	if c.Selefra.Name == "" {
+		err = errors.New("name is empty")
 		return err
 	}
 	uid, _ := uuid.NewUUID()

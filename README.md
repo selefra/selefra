@@ -84,7 +84,7 @@ brew install selefra/tap/selefra
 2. Initialization project
 
 ```bash
-selefra init -d selefra-demo && cd selefra-demo
+selefra init selefra-demo && cd selefra-demo
 ```
 
 3. Build infrastructure Analysis code
