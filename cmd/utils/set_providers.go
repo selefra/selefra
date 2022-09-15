@@ -7,18 +7,17 @@ import (
 )
 
 func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary, config *config.SelefraConfig) error {
-
-	config.Providers.Kind = yaml.MappingNode
-	config.Providers.HeadComment = "provider configurations"
+	if config.Providers.Kind != yaml.MappingNode {
+		config.Providers.Kind = yaml.MappingNode
+		config.Providers.Tag = "!!map"
+		config.Providers.HeadComment = "provider configurations"
+		config.Providers.Value = ""
+		config.Providers.Content = make([]*yaml.Node, 0)
+	}
 	var node yaml.Node
 	yaml.Unmarshal([]byte(DefaultConfigTemplate), &node)
 
 	var provNode yaml.Node
-	for _, Node := range config.Providers.Content {
-		if Node.Kind == yaml.ScalarNode && Node.Value == provider.Name {
-			return nil
-		}
-	}
 	provNode.Content = append([]*yaml.Node{
 		{
 			Kind:  yaml.ScalarNode,

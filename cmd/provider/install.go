@@ -123,7 +123,16 @@ func newCmdProviderInstall() *cobra.Command {
 				}
 				ui.PrintSuccessF("Synchronization %s@%s's config successful", p.Name, p.Version)
 				utils2.SetSelefraProvider(p, &configYaml)
-				err = utils2.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
+				hasProvider := false
+				for _, Node := range configYaml.Providers.Content {
+					if Node.Kind == yaml.ScalarNode && Node.Value == p.Name {
+						hasProvider = true
+						break
+					}
+				}
+				if !hasProvider {
+					err = utils2.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
+				}
 				if err != nil {
 					ui.PrintErrorF("set %s@%s's config failed：%s", p.Name, p.Version, err.Error())
 					return nil
