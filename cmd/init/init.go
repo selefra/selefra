@@ -260,7 +260,3 @@ func initFunc(cmd *cobra.Command, args []string) error {
 	CreateYaml(cmd.Context())
 	return nil
 }
-
-type name[T any] struct {
-	FAN []T
-}

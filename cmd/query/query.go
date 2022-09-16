@@ -17,8 +17,8 @@ import (
 func NewQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",
-		Short: "query",
-		Long:  "query",
+		Short: "Query infrastructure data from storage",
+		Long:  "Query infrastructure data from storage",
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx := cmd.Context()
 			ui.PrintWarningLn("Please select table.")

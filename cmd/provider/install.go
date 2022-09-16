@@ -69,7 +69,8 @@ func newCmdProviderInstall() *cobra.Command {
 				p, err := provider.Download(ctx, pr, true)
 				continueFlag := false
 				for _, provider := range configYaml.Selefra.Providers {
-					if strings.ToLower(provider.Name) == strings.ToLower(p.Name) && strings.ToLower(provider.Version) == strings.ToLower(p.Version) {
+					providerName := utils.GetNameBySource(*provider.Source)
+					if strings.ToLower(providerName) == strings.ToLower(p.Name) && strings.ToLower(provider.Version) == strings.ToLower(p.Version) {
 						continueFlag = true
 						break
 					}

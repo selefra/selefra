@@ -7,22 +7,24 @@ import (
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
+	utils2 "github.com/selefra/selefra/cmd/utils"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/plugin"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
+	"github.com/selefra/selefra/ui/progress"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 func NewFetchCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "fetch",
-		Short: "fetch",
-		Long:  "fetch",
+		Short: "Fetch resources from configured providers",
+		Long:  "Fetch resources from configured providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			var cof = &config.SelefraConfig{}
@@ -33,12 +35,20 @@ func NewFetchCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			ui.PrintSuccessF("Selefra start fetch")
 			for _, p := range cof.Selefra.Providers {
 				err = Fetch(ctx, cof, p)
 				if err != nil {
 					return err
 				}
 			}
+
+			ui.PrintSuccessF(`
+This may be exception, view detailed exception in %s.
+
+Need help? Know on Slack or open a Github Issue: GitHub - selefra/selefra: Selefra - Infrastructure as Code for Infrastructure Analysis.`,
+				filepath.Join(*global.WORKSPACE, "logs"))
+
 			return nil
 		},
 	}
@@ -48,12 +58,12 @@ func NewFetchCmd() *cobra.Command {
 }
 
 func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired) error {
-
 	if p.Path == "" {
 		p.Path = utils.GetPathBySource(*p.Source)
 	}
-
-	plug, err := plugin.NewManagedPlugin(p.Path, p.Name, p.Version, "", nil)
+	var providersName = utils.GetNameBySource(*p.Source)
+	ui.PrintSuccessF("	%s@%s pull infrastructure data:", providersName, p.Version)
+	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
 		return err
 	}
@@ -63,9 +73,9 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	if err != nil {
 		return err
 	}
-	v, err := cof.GetConfigWithViper()
+	err = cof.GetConfig()
 
-	conf, err := yaml.Marshal(v.Get("providers." + p.Name))
+	conf, err := utils2.GetProviders(cof, providersName)
 
 	if err != nil {
 		return err
@@ -119,17 +129,38 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
+	progbar := progress.CreateProgress()
+	progbar.Add(p.Name+"@"+p.Version, -1)
+	success := 0
+	warnings := 0
+	allTables := 0
 	for {
 		current := 0
 		res, err := recv.Recv()
+
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				progbar.Done(p.Name + "@" + p.Version)
 				break
 			}
 			return err
 		}
+		allTables = int(res.TableCount)
+		successNum := 0
+		warningsNum := 0
+		for _, value := range res.FinishedTables {
+			if value {
+				successNum++
+			} else {
+				warningsNum++
+			}
+		}
+		success = successNum
+		warnings = warningsNum
+		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
+		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
 		if res.Diagnostics != nil && res.Diagnostics.HasError() {
-			_ = ui.PrintDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
 		}
 
 		if res != nil {
@@ -140,5 +171,8 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			}
 		}
 	}
+	progbar.Wait(p.Name + "@" + p.Version)
+
+	ui.PrintSuccessF("Pull complete! Total Resources pulled:%d        Errors: %d         Warnings:%d\n", allTables, success, warnings)
 	return nil
 }

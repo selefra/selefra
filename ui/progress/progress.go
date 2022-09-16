@@ -13,6 +13,7 @@ import (
 type Bar struct {
 	b       *mpb.Bar
 	Name    string
+	Desc    string
 	Start   time.Time
 	Current time.Time
 }
@@ -23,6 +24,15 @@ type Progress struct {
 	bars    sync.Map
 	builder strings.Builder
 	lock    sync.Mutex
+}
+
+func ShowDesc(bar *Bar, wcc ...decor.WC) decor.Decorator {
+	producer := func(bar *Bar, wcc ...decor.WC) decor.DecorFunc {
+		return func(s decor.Statistics) string {
+			return bar.Desc
+		}
+	}
+	return decor.Any(producer(bar), wcc...)
 }
 
 func (p *Progress) TrackProgress(src string, currentSize, totalSize int64, stream io.ReadCloser) (body io.ReadCloser) {
@@ -72,8 +82,8 @@ func (p *Progress) Add(name string, total int64) {
 		total,
 		mpb.BarWidth(100),
 		mpb.PrependDecorators(
-			decor.Name(name),
-			decor.Percentage(decor.WCSyncSpace),
+			decor.Name(name, decor.WCSyncSpaceR),
+			decor.CountersNoUnit("[%d/%d]", decor.WCSyncWidth),
 		),
 		mpb.AppendDecorators(
 			decor.OnComplete(
@@ -98,13 +108,14 @@ func (p *Progress) Increment(name string, n int64) {
 	bar.(*Bar).Current = time.Now()
 }
 
-func (p *Progress) Current(name string, n int64) {
+func (p *Progress) Current(name string, n int64, desc ...string) {
 	bar, ok := p.bars.Load(name)
 	if !ok {
 		return
 	}
 	bar.(*Bar).b.SetCurrent(n)
 	bar.(*Bar).Current = time.Now()
+	bar.(*Bar).Desc = desc[0]
 }
 
 func (p *Progress) SetTotal(name string, n int64) {

@@ -8,6 +8,7 @@ import (
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
+	utils2 "github.com/selefra/selefra/cmd/utils"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/plugin"
@@ -15,7 +16,6 @@ import (
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/client"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"os"
 )
 
@@ -43,7 +43,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 		ui.PrintErrorF(err.Error())
 		return nil
 	}
-	cof, err := s.GetConfigWithViper()
+	err = s.GetConfig()
 	if err != nil {
 		ui.PrintErrorF("Profile deserialization exception:%s", err.Error())
 		return nil
@@ -58,13 +58,14 @@ func testFunc(cmd *cobra.Command, args []string) error {
 		if p.Path == "" {
 			p.Path = utils.GetPathBySource(*p.Source)
 		}
-		plug, err := plugin.NewManagedPlugin(p.Path, p.Name, p.Version, "", nil)
+		var providersName = utils.GetNameBySource(*p.Source)
+		plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 		if err != nil {
 
 			ui.PrintErrorF("%s %s verification failed ：%s", p.Name, p.Version, err.Error())
 			continue
 		}
-		conf, err := yaml.Marshal(cof.Get("providers." + p.Name))
+		conf, err := utils2.GetProviders(&s, p.Name)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			continue

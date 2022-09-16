@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/selefra/selefra/ui"
 	"os"
 	"path"
 	"path/filepath"
@@ -41,6 +42,7 @@ type RulesConfig struct {
 }
 
 type Rule struct {
+	Path     string                            `yaml:"path"`
 	Name     string                            `yaml:"name"`
 	Input    map[string]map[string]interface{} `yaml:"input"`
 	Query    string                            `yaml:"query"`
@@ -441,6 +443,24 @@ func GetConfigPath() (string, error) {
 	return "", errors.New("No config file found")
 }
 
+func GetRules() (RulesConfig, error) {
+	var rules RulesConfig
+	configMap, err := readAllConfig(*global.WORKSPACE, nil)
+	for rulePath, rule := range configMap[RULES] {
+		var baseRule RulesConfig
+		ws := strings.ReplaceAll(rulePath, *global.WORKSPACE+"/", "")
+		if strings.Index(ws, string(os.PathSeparator)) < 0 {
+			yaml.Unmarshal([]byte(rule), &baseRule)
+			for i := range baseRule.Rules {
+				baseRule.Rules[i].Path = rulePath
+				ui.PrintSuccessF("	%s - Rule %s: loading ... ", rulePath, baseRule.Rules[i].Name)
+			}
+			rules.Rules = append(rules.Rules, baseRule.Rules...)
+		}
+	}
+	return rules, err
+}
+
 func (c *SelefraConfig) GetConfigByNode() error {
 
 	configMap, err := readAllConfig(*global.WORKSPACE, nil)
@@ -453,6 +473,7 @@ func (c *SelefraConfig) GetConfigByNode() error {
 	for pathStr, configStr := range clientMap {
 		var selefraMap = make(map[string]*yaml.Node)
 		selefraMap["cli_version"] = nil
+		selefraMap["name"] = nil
 		selefraMap["connection"] = nil
 		selefraMap["providers"] = nil
 		bodyNode := new(yaml.Node)
@@ -601,7 +622,7 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	if err != nil {
 		return config, err
 	}
-	err = config.Unmarshal(&c)
+	yaml.Unmarshal(clientByte, &c)
 	if err != nil {
 		return config, err
 	}

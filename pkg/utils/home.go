@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func Home() (string, string, error) {
@@ -46,6 +47,15 @@ func Home() (string, string, error) {
 
 func CreateSource(path, version string) string {
 	return "selefra/" + path + "@" + version
+}
+
+func GetNameBySource(source string) string {
+	path := filepath.Base(source)
+	arr := strings.Split(path, "@")
+	if len(arr) > 0 {
+		return arr[0]
+	}
+	return ""
 }
 
 func GetPathBySource(source string) string {

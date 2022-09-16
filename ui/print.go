@@ -120,6 +120,44 @@ func PrintCustomizeLn(c *color.Color, a ...interface{}) {
 	_, _ = c.Println(a...)
 }
 
+func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
+	InitLogger()
+	var err error
+	for i := range diagnostics {
+		switch diagnostics[i].Level() {
+		case schema.DiagnosisLevelError:
+			_, f, l, ok := runtime.Caller(1)
+			if ok {
+				if defaultLogger != nil {
+					defaultLogger.Log(hclog.Error, "%s %s:%d", diagnostics[i].Content(), f, l)
+				}
+			}
+			err = errors.New(diagnostics[i].Content())
+		case schema.DiagnosisLevelWarn:
+			if defaultLogger != nil {
+				defaultLogger.Log(hclog.Warn, diagnostics[i].Content())
+			}
+		case schema.DiagnosisLevelInfo:
+			if defaultLogger != nil {
+				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
+			}
+		case schema.DiagnosisLevelDebug:
+			if defaultLogger != nil {
+				defaultLogger.Log(hclog.Debug, diagnostics[i].Content())
+			}
+		case schema.DiagnosisLevelTrace:
+			if defaultLogger != nil {
+				defaultLogger.Log(hclog.Trace, diagnostics[i].Content())
+			}
+		case schema.DiagnosisLevelFatal:
+			if defaultLogger != nil {
+				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
+			}
+		}
+	}
+	return err
+}
+
 func PrintDiagnostic(diagnostics []*schema.Diagnostic) error {
 	InitLogger()
 	var err error

@@ -42,7 +42,7 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	s := config.SelefraConfig{}
-	_, err = s.GetConfigWithViper()
+	err = s.GetConfig()
 	if err != nil {
 		ui.PrintErrorLn("Client creation error:" + err.Error())
 		return nil
@@ -58,8 +58,23 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 		ui.PrintErrorLn("Client creation error:" + err.Error())
 		return nil
 	}
+	var mRules []config.Rule
+	ui.PrintSuccessLn(`----------------------------------------------------------------------------------------------
 
-	mRules := CreateRulesByModule(modules)
+Loading Selefra analysis code ...
+`)
+	if len(modules) == 0 {
+		mRules = *RunRulesWithoutModule()
+	} else {
+		mRules = CreateRulesByModule(modules)
+	}
+	ui.PrintSuccessF(`
+This may be exception, view detailed exception in %s.
+
+Need help? Know on Slack or open a Github Issue: GitHub - selefra/selefra: Selefra - Infrastructure as Code for Infrastructure Analysis.
+`, filepath.Join(*global.WORKSPACE, "logs"))
+
+	ui.PrintSuccessF("---------------------------------- Result for rules  ----------------------------------------")
 	RunRules(ctx, c, mRules)
 	return nil
 }
@@ -70,14 +85,24 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		for key, input := range rule.Input {
 			params[key] = input["default"]
 		}
-		query := rule.Query
+		ui.PrintSuccessF("%s - Rule \"%s\"", rule.Path, rule.Name)
 
-		queryStr, err := fmtTemplate(query, params)
+		ui.PrintSuccessLn("Description:")
+		desc, err := fmtTemplate(rule.Metadata.Description, params)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return
 		}
-		ui.PrintWarningLn(queryStr)
+		ui.PrintSuccessLn("	" + desc)
+
+		ui.PrintSuccessLn("Policy:")
+		queryStr, err := fmtTemplate(rule.Query, params)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return
+		}
+		ui.PrintSuccessLn("	" + queryStr)
+
 		res, diag := c.Storage.Query(ctx, queryStr)
 		if diag != nil && diag.HasError() {
 			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
@@ -90,6 +115,7 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		}
 		column := table.GetColumnNames()
 		rows := table.GetMatrix()
+		ui.PrintSuccessLn("Output")
 		for _, row := range rows {
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
@@ -97,7 +123,12 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 				key := column[index]
 				outMap[key] = value
 			}
-			ui.PrintSuccessLn(fmtTemplate(outPut, outMap))
+			out, err := fmtTemplate(outPut, outMap)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return
+			}
+			ui.PrintSuccessLn("	" + out)
 		}
 	}
 }
@@ -112,6 +143,21 @@ func CreateRulesByModule(modules []config.Module) []config.Rule {
 	return rules
 }
 
+func RunRulesWithoutModule() *[]config.Rule {
+	rules, _ := config.GetRules()
+	for i := range rules.Rules {
+		if strings.HasPrefix(rules.Rules[i].Query, ".") {
+			sqlByte, err := os.ReadFile(filepath.Join(".", rules.Rules[i].Query))
+			if err != nil {
+				ui.PrintErrorF("sql open error:%s", err.Error())
+				return nil
+			}
+			rules.Rules[i].Query = string(sqlByte)
+		}
+	}
+	return &rules.Rules
+}
+
 func RunPathModule(module config.Module) *[]config.Rule {
 	b, err := os.ReadFile(module.Uses)
 	if err != nil {
@@ -124,14 +170,13 @@ func RunPathModule(module config.Module) *[]config.Rule {
 		ui.PrintErrorLn(err.Error())
 		return nil
 	}
-	fmtRuleConfigStr, err := fmtTemplate(string(b), module.Input)
 
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return nil
 	}
 	var ruleConfig config.RulesConfig
-	err = yaml.Unmarshal([]byte(fmtRuleConfigStr), &ruleConfig)
+	err = yaml.Unmarshal([]byte(string(b)), &ruleConfig)
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return nil
@@ -139,7 +184,7 @@ func RunPathModule(module config.Module) *[]config.Rule {
 	for i := range ruleConfig.Rules {
 		ruleConfig.Rules[i].Output = baseRule.Rules[i].Output
 		ruleConfig.Rules[i].Query = baseRule.Rules[i].Query
-
+		ruleConfig.Rules[i].Path = module.Uses
 		if strings.HasPrefix(ruleConfig.Rules[i].Query, ".") {
 			dir := filepath.Dir(module.Uses)
 			sqlByte, err := os.ReadFile(filepath.Join(dir, ruleConfig.Rules[i].Query))
@@ -154,6 +199,7 @@ func RunPathModule(module config.Module) *[]config.Rule {
 				input["default"] = module.Input[key]
 			}
 		}
+		ui.PrintSuccessF("	%s - Rule %s: loading ... ", module.Uses, baseRule.Rules[i].Name)
 	}
 
 	return &ruleConfig.Rules

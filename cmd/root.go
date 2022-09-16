@@ -61,6 +61,9 @@ func init() {
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		fmt.Println(strings.TrimSpace(cmd.Long))
 
+		fmt.Println("\nUsage:")
+		fmt.Printf("  %-13s", "selefra [command]\n\n")
+
 		fmt.Println("Main commands:")
 		for _, c := range group["main"] {
 			fmt.Printf("  %-13s%s\n", c.Name(), c.Short)

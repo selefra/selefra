@@ -7,8 +7,8 @@ import (
 func NewProviderCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider [command]",
-		Short: "provider",
-		Long:  "provider",
+		Short: "Top-level command to interact with providers",
+		Long:  "Top-level command to interact with providers",
 	}
 
 	cmd.AddCommand(newCmdProviderUpdate(), newCmdProviderDelete(), newCmdProviderList(), newCmdProviderInstall())
