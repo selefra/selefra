@@ -97,11 +97,12 @@ selefra apply
 
 ## Community
 
-Selefra is a community driven project,we welcome you to file a bug,suggest an improvement ,or request a new feature .
+Selefra is a community driven project,we welcome you to file a bug,suggest an improvement ,or request a new feature.
 
 -  Join [Selefra Community Slack](https://selefra.slack.com) to discuss Selefra and join `Selefra Community Hour`.
--  Follow us on [Twitter](https://twitter.com/Selefra) and shard Selefra messages on Twitter.
--  Hava question and feature?Know on [Slack](https://selefra.slack.com) or open a [Github Issue](https://github.com/selefra/selefra/issues/new/choose)
+-  Follow us on [Twitter](https://twitter.com/SelefraCorp) and shard Selefra messages on Twitter.
+-  Have question and feature?Now on [Slack](https://selefra.slack.com) or open a [GitHub Issue](https://github.com/selefra/selefra/issues/new/choose)
+
 
 ## Contributing
 
