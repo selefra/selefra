@@ -10,7 +10,7 @@ We value each and every member, make sure to take some time and read the [Code o
 
 ### Getting help
 
-[Community Slack](http://join.selefra)
+[Community Slack](https://selefra.slack.com/)
 
 ### Developing
 
