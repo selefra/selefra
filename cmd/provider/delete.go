@@ -11,9 +11,9 @@ import (
 
 func newCmdProviderDelete() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "delete",
-		Long:  "delete",
+		Use:   "remove",
+		Short: "Remove one or more plugins from the download cache",
+		Long:  "Remove one or more plugins from the download cache",
 		RunE: func(cmd *cobra.Command, names []string) error {
 			argsMap := make(map[string]bool)
 			for i := range names {

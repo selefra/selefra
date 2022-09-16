@@ -13,8 +13,8 @@ import (
 func newCmdProviderUpdate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "update",
-		Long:  "update",
+		Short: "Update one or more plugins",
+		Long:  "Update one or more plugins",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			wd, err := os.Getwd()

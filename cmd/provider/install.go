@@ -22,8 +22,8 @@ import (
 func newCmdProviderInstall() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "install",
-		Long:  "install",
+		Short: "Install one or more plugins",
+		Long:  "Install one or more plugins",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			wd, err := os.Getwd()

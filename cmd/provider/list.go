@@ -13,8 +13,8 @@ import (
 func newCmdProviderList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "list",
-		Long:  "list",
+		Short: "List currently installed plugins",
+		Long:  "List currently installed plugins",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			wd, err := os.Getwd()
 			if err != nil {
