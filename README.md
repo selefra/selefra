@@ -8,7 +8,7 @@
 
 Selefra's Infrastructure as Code is the easiest and agile way to analysis IAM,EC2,VPC, and infrastructure ,from any cloud control plane.
 
-Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS,GCP,Azure,and [hosted data source provider](https://giithub.com/selefra/selefra-provider-sdk/).
+Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS,GCP,Azure,and [hosted data source provider](https://github.com/selefra/selefra-provider-sdk/).
 
 For example, analysis  s3 bucket misconfigured from infrastructure:
 
