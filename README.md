@@ -14,52 +14,40 @@ For example, analysis  s3 bucket misconfigured from infrastructure:
 
 ```yaml
 selefra:
-  cli-version: "v0.0.1"
+  name: selefra-demo
+  cli_version: ">=0.0.1"
   providers:
     - name: aws
       source: 'selefra/aws'
-      version: "v0.0.1"
+      version: "latest"
+  connection:
+    type: postgres
+    username: postgres
+    password: pass
+    host: localhost
+    port: 5432
+    database: postgres
+    sslmode: disable
 
 providers:
-  aws:
+  - name: aws
     regions:
       - us-east-1
-```
-
-```yaml
-modules:
-  - name: CpuMonitor
-    uses: ./rules/default.yaml
-    input:
-      name: uzju
-      labels:
-        instance: warning
-```
-
-```yaml
-rules: 
-  name: AWS_S3_Public_Write
-  input: 
-    cpu_rate:
-      type: string
-      description: "aws region"
-      default: "us-east-1"
-  query: |
-    SELECT * FROM aws_s3_buckets bk, aws_s3_bucket_grants bkg 
-    WHERE bk.bucket = bkg.bucket 
-    AND bk.uri = 'http://acs.amazonaws.com/groups/global/AllUsers' 
-    AND bkg.permission IN ('WRITE_ACP', 'FULL_CONTROL')
-    AND region={{.cpu_rate}};
-  labels:
-    severity: Critical
-  metadata:
-    summary: AWS S3 bucket has publict write
-  output: 'bucket: {{.query.bucket}}'
+      
+rules:
+  - name: Disabled_MFA
+    query: select * from aws_iam_users where user_name = '<root_account>' and mfa_active = 'f'
+    labels:
+      severity: Critical
+    metadata:
+      title: "MFA is disabled for root user"
+      description: "MFA is disabled for root user"
+    output: "AWS user has disabled MFA, username: {{.user_name}}"
 ```
 
 ## Getting Started
 
-// @TODO insert selefra cli useage gif or video
+    
 
 Learn AWS,GCP,Azure,and more cloud/Infrastructure's usecase with [Getting Started](https://selefra.io/docs/gettingstared) .
 
