@@ -6,7 +6,7 @@ import (
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
-	utils2 "github.com/selefra/selefra/cmd/utils"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/plugin"
@@ -121,7 +121,7 @@ func newCmdProviderInstall() *cobra.Command {
 					return nil
 				}
 				ui.PrintSuccessF("Synchronization %s@%s's config successful", p.Name, p.Version)
-				utils2.SetSelefraProvider(p, &configYaml)
+				tools.SetSelefraProvider(p, &configYaml)
 				hasProvider := false
 				for _, Node := range configYaml.Providers.Content {
 					if Node.Kind == yaml.ScalarNode && Node.Value == p.Name {
@@ -130,7 +130,7 @@ func newCmdProviderInstall() *cobra.Command {
 					}
 				}
 				if !hasProvider {
-					err = utils2.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
+					err = tools.SetProviders(res.DefaultConfigTemplate, p, &configYaml)
 				}
 				if err != nil {
 					ui.PrintErrorF("set %s@%s's config failed：%s", p.Name, p.Version, err.Error())

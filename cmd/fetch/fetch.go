@@ -7,7 +7,7 @@ import (
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
-	utils2 "github.com/selefra/selefra/cmd/utils"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/plugin"
@@ -75,7 +75,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	err = cof.GetConfig()
 
-	conf, err := utils2.GetProviders(cof, providersName)
+	conf, err := tools.GetProviders(cof, providersName)
 
 	if err != nil {
 		return err

@@ -8,7 +8,7 @@ import (
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
-	utils2 "github.com/selefra/selefra/cmd/utils"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/plugin"
@@ -65,7 +65,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 			ui.PrintErrorF("%s %s verification failed ：%s", p.Name, p.Version, err.Error())
 			continue
 		}
-		conf, err := utils2.GetProviders(&s, p.Name)
+		conf, err := tools.GetProviders(&s, p.Name)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			continue
