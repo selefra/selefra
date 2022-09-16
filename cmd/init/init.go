@@ -99,6 +99,7 @@ func CreateYaml(ctx context.Context) error {
 	initHeaderOutput(provs)
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("project name:(%s)", filepath.Base(*global.WORKSPACE))
+
 	projectName, err := reader.ReadString('\n')
 	if err != nil {
 		return nil
@@ -232,7 +233,7 @@ func initFunc(cmd *cobra.Command, args []string) error {
 	}
 	dir, _ := os.ReadDir(*global.WORKSPACE)
 	if len(dir) != 0 && !force {
-		errStr := fmt.Sprintf("%s is not empty; rerun in an empty directory, pass the path to an empty directory to --dir, or use --force\n", *global.WORKSPACE)
+		errStr := fmt.Sprintf("%s is not empty; Rerun in an empty directory, or use -- force/-f to force overwriting in the current directory\n", *global.WORKSPACE)
 		return errors.New(errStr)
 	}
 	_, clientErr := config.GetClientStr()
