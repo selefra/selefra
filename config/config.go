@@ -47,7 +47,7 @@ type Rule struct {
 	Input    map[string]map[string]interface{} `yaml:"input"`
 	Query    string                            `yaml:"query"`
 	Interval string                            `yaml:"interval"`
-	Lables   struct {
+	Labels   struct {
 		Severity string `yaml:"severity"`
 		Team     string `yaml:"team"`
 		Author   string `yaml:"author"`
@@ -548,7 +548,7 @@ func (c *SelefraConfig) GetConfigByNode() error {
 			ruleMap["input"] = nil
 			ruleMap["query"] = nil
 			ruleMap["interval"] = nil
-			ruleMap["lables"] = nil
+			ruleMap["labels"] = nil
 			ruleMap["metadata"] = nil
 			ruleMap["output"] = nil
 			err = checkNode(ruleMap, node.Content, pathStr)
@@ -556,7 +556,9 @@ func (c *SelefraConfig) GetConfigByNode() error {
 			if err != nil {
 				return err
 			}
-
+			if ruleMap["input"] == nil {
+				continue
+			}
 			for i := range ruleMap["input"].Content {
 				if i%2 != 0 {
 					var ruleInputMap = make(map[string]*yaml.Node)
@@ -589,6 +591,7 @@ func hasKeys(key string, keys []string) bool {
 func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr string) error {
 	var keys []string
 	for s := range configMap {
+
 		keys = append(keys, s)
 	}
 	for i := range bodyNode {
@@ -603,6 +606,9 @@ func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr s
 		configMap[bodyNode[i].Value] = bodyNode[i+1]
 	}
 	for key, node := range configMap {
+		if key == "path" || key == "input" || key == "interval" {
+			continue
+		}
 		if node == nil {
 			errStr := fmt.Sprintf("%s Missing configuration %s", pathStr, key)
 			return errors.New(errStr)

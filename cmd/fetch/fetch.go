@@ -46,7 +46,7 @@ func NewFetchCmd() *cobra.Command {
 			ui.PrintSuccessF(`
 This may be exception, view detailed exception in %s.
 
-Need help? Know on Slack or open a Github Issue: GitHub - selefra/selefra: Selefra - Infrastructure as Code for Infrastructure Analysis.`,
+Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community`,
 				filepath.Join(*global.WORKSPACE, "logs"))
 
 			return nil

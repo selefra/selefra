@@ -10,7 +10,7 @@ rules:
         default: "587534146112"
     query: SELECT * FROM aws_s3_account_config WHERE "account_id" = '{{.account_id}}';
     interval: 0s
-    lables:
+    labels:
       severity: warning
       team: ops
       author: leon

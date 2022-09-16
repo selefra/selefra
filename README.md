@@ -50,7 +50,7 @@ rules:
     AND bk.uri = 'http://acs.amazonaws.com/groups/global/AllUsers' 
     AND bkg.permission IN ('WRITE_ACP', 'FULL_CONTROL')
     AND region={{.cpu_rate}};
-  lables:
+  labels:
     severity: Critical
   metadata:
     summary: AWS S3 bucket has publict write

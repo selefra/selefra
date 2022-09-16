@@ -12,7 +12,7 @@ import (
 )
 
 func Sync() error {
-	ui.PrintSuccessLn("nitializing provider plugins...")
+	ui.PrintSuccessLn("Initializing provider plugins...")
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
 	err := cof.GetConfig()
@@ -50,9 +50,9 @@ func Sync() error {
 	}
 
 	ui.PrintSuccessF(`
-This may be exception, view detailed exception in %s.
+This may be exception, view detailed exception in %s .
 
-Need help? Know on Slack or open a Github Issue: GitHub - selefra/selefra: Selefra - Infrastructure as Code for Infrastructure Analysis.
+Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community
 `, filepath.Join(*global.WORKSPACE, "logs"))
 	return nil
 }
