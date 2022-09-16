@@ -2,32 +2,18 @@ package init
 
 const ruleComment = `
 rules:
-  - name: HostHighCpuLoad
-    input:
-      account_id:
-        type: string
-        description: "cpu rate"
-        default: "587534146112"
-    query: SELECT * FROM aws_s3_account_config WHERE "account_id" = '{{.account_id}}';
-    interval: 0s
+  - name: Disabled_MFA
+    query: select * from aws_iam_users where user_name = '<root_account>' and mfa_active = 'f'
     labels:
-      severity: warning
-      team: ops
-      author: leon
+      severity: Critical
     metadata:
-      id: SF001
-      summary: Host high CPU load (instance {{ .labels.instance }})
-      description: "Test desc "
-    output: "{{.account_id}} is warning, block_public_acls: {{.block_public_acls}}"
-
+      title: "MFA is disabled for root user"
+      description: "MFA is disabled for root user"
+    output: "AWS user has disabled MFA, username: {{.user_name}}"
 `
 
 const moduleComment = `
 modules:
-  - name: CpuMonitor
-    uses: ./rules/default.yaml
-    input:
-      name: uzju
-      labels:
-        instance: warning
+  - name: AWS_Security_Demo
+    uses: ./rules/iam_mfa.yaml
 `

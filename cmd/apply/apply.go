@@ -68,13 +68,8 @@ Loading Selefra analysis code ...
 	} else {
 		mRules = CreateRulesByModule(modules)
 	}
-	ui.PrintSuccessF(`
-This may be exception, view detailed exception in %s.
 
-Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community
-`, filepath.Join(*global.WORKSPACE, "logs"))
-
-	ui.PrintSuccessF("---------------------------------- Result for rules  ----------------------------------------")
+	ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
 	RunRules(ctx, c, mRules)
 	return nil
 }
@@ -85,7 +80,7 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		for key, input := range rule.Input {
 			params[key] = input["default"]
 		}
-		ui.PrintSuccessF("%s - Rule \"%s\"", rule.Path, rule.Name)
+		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
 
 		ui.PrintSuccessLn("Description:")
 		desc, err := fmtTemplate(rule.Metadata.Description, params)

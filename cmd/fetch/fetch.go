@@ -62,7 +62,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		p.Path = utils.GetPathBySource(*p.Source)
 	}
 	var providersName = utils.GetNameBySource(*p.Source)
-	ui.PrintSuccessF("	%s@%s pull infrastructure data:", providersName, p.Version)
+	ui.PrintSuccessF("%s@%s pull infrastructure data:\n", providersName, p.Version)
 	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
 		return err
@@ -132,8 +132,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	progbar := progress.CreateProgress()
 	progbar.Add(p.Name+"@"+p.Version, -1)
 	success := 0
-	warnings := 0
-	allTables := 0
+	errorsN := 0
 	for {
 		current := 0
 		res, err := recv.Recv()
@@ -145,18 +144,17 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			}
 			return err
 		}
-		allTables = int(res.TableCount)
 		successNum := 0
-		warningsNum := 0
+		errorsNum := 0
 		for _, value := range res.FinishedTables {
 			if value {
 				successNum++
 			} else {
-				warningsNum++
+				errorsNum++
 			}
 		}
 		success = successNum
-		warnings = warningsNum
+		errorsN = errorsNum
 		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
 		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
 		if res.Diagnostics != nil && res.Diagnostics.HasError() {
@@ -173,6 +171,6 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
 
-	ui.PrintSuccessF("Pull complete! Total Resources pulled:%d        Errors: %d         Warnings:%d\n", allTables, success, warnings)
+	ui.PrintSuccessF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
 	return nil
 }

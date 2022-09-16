@@ -35,21 +35,41 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 
 	yaml.Unmarshal([]byte(DefaultConfigTemplate), &node)
 	var provNode yaml.Node
-	provNode.Content = []*yaml.Node{
-		{
-			Kind: yaml.MappingNode,
-			Tag:  "!!map",
-			Content: append([]*yaml.Node{
-				{
-					Kind:  yaml.ScalarNode,
-					Value: "name",
-				},
-				{
-					Kind:  yaml.ScalarNode,
-					Value: provider.Name,
-				},
-			}, node.Content[0].Content...),
-		},
+	if node.Content == nil {
+		provNode.Content = []*yaml.Node{
+			{
+				Kind: yaml.MappingNode,
+				Tag:  "!!map",
+				Content: append([]*yaml.Node{
+					{
+						Kind:        yaml.ScalarNode,
+						Value:       "name",
+						FootComment: DefaultConfigTemplate,
+					},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: provider.Name,
+					},
+				}),
+			},
+		}
+	} else {
+		provNode.Content = []*yaml.Node{
+			{
+				Kind: yaml.MappingNode,
+				Tag:  "!!map",
+				Content: append([]*yaml.Node{
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "name",
+					},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: provider.Name,
+					},
+				}),
+			},
+		}
 	}
 
 	config.Providers.Content = append(config.Providers.Content, provNode.Content...)

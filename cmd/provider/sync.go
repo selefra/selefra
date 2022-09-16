@@ -12,7 +12,7 @@ import (
 )
 
 func Sync() error {
-	ui.PrintSuccessLn("Initializing provider plugins...")
+	ui.PrintSuccessLn("Initializing provider plugins...\n")
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
 	err := cof.GetConfig()
@@ -24,8 +24,8 @@ func Sync() error {
 		return err
 	}
 	provider := registry.NewProviderRegistry(namespace)
-	ui.PrintSuccessF("Selefra has been successfully installed providers!")
-	ui.PrintSuccessF("Checking Selefra provider updates......")
+	ui.PrintSuccessF("Selefra has been successfully installed providers!\n")
+	ui.PrintSuccessF("Checking Selefra provider updates......\n")
 	for _, p := range cof.Selefra.Providers {
 		prov := registry.Provider{
 			Name:    p.Name,
@@ -37,7 +37,9 @@ func Sync() error {
 			ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())
 			continue
 		} else {
-			ui.PrintSuccessF("%s@%s all ready updated!", p.Name, p.Version)
+			ui.PrintSuccessF("	%s@%s all ready updated!\n", p.Name, p.Version)
+
+			ui.PrintSuccessF("Selefra has been finished update providers!\n")
 		}
 
 		p.Path = pp.Filepath

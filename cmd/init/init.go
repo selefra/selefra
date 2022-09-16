@@ -189,7 +189,7 @@ func CreateYaml(ctx context.Context) error {
 		}
 	}
 
-	err = os.WriteFile(filepath.Join(rulePath, "default.yaml"), []byte(strings.TrimSpace(ruleComment)), 0644)
+	err = os.WriteFile(filepath.Join(rulePath, "iam_mfa.yaml"), []byte(strings.TrimSpace(ruleComment)), 0644)
 	if err != nil {
 		return err
 	}
