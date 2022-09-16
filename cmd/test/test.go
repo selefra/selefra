@@ -61,8 +61,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 		var providersName = utils.GetNameBySource(*p.Source)
 		plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 		if err != nil {
-
-			ui.PrintErrorF("%s %s verification failed ：%s", p.Name, p.Version, err.Error())
+			ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
 			continue
 		}
 		conf, err := tools.GetProviders(&s, p.Name)
@@ -86,7 +85,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 			ProviderConfig: pointer.ToStringPointer(string(conf)),
 		})
 		if err != nil {
-			ui.PrintErrorF("%s %s verification failed ：%s", p.Name, p.Version, err.Error())
+			ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
 			continue
 		} else {
 			if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
@@ -111,7 +110,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 				continue
 			}
 		}
-		ui.PrintSuccessF("%s %s check successfully", p.Name, p.Version)
+		ui.PrintSuccessF("%s@%s check successfully", providersName, p.Version)
 	}
 
 	ui.PrintSuccessF("Providers verification completed")
