@@ -65,7 +65,7 @@ Learn AWS,GCP,Azure,and more cloud/Infrastructure's usecase with [Getting Starte
 
 Otherwise,run a demo process through the following setps,in miniutes:
 
-1. Install Selefra
+### 1. Install Selefra
 
 To install Selefra on MacOS or [download packages](https://github.com/selefra/selefra/releases)  to install Selefra on other platform.
 
@@ -81,13 +81,13 @@ Now,install Selefra with selefra/tap/selefra
 brew install selefra/tap/selefra
 ```
 
-2. Initialization project
+### 2. Initialization project
 
 ```bash
 selefra init selefra-demo && cd selefra-demo
 ```
 
-3. Build infrastructure Analysis code
+### 3. Build infrastructure Analysis code
 
 ```bash
 selefra apply 
