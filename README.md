@@ -106,7 +106,8 @@ Selefra is a community driven project,we welcome you to file a bug,suggest an im
 
 ## Contributing
 
-To contribute, visit [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra Roadmap](https://github.com/selefra/projects/1)
+To contribute, visit [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra roadmap](https://github.com/orgs/selefra/projects/1)
+
 
 ## License
 
