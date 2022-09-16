@@ -8,7 +8,7 @@
 
 Selefra's Infrastructure as Code is the easiest and agile way to analysis IAM,EC2,VPC, and infrastructure ,from any cloud control plane.
 
-Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS,GCP,Azure,and [hosted data source provider](https://giithub.com/selefra/selefra-provider-sdk/).
+Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS,GCP,Azure,and [hosted data source provider](https://github.com/selefra/selefra-provider-sdk/).
 
 For example, analysis  s3 bucket misconfigured from infrastructure:
 
@@ -65,7 +65,7 @@ Learn AWS,GCP,Azure,and more cloud/Infrastructure's usecase with [Getting Starte
 
 Otherwise,run a demo process through the following setps,in miniutes:
 
-1. Install Selefra
+### 1. Install Selefra
 
 To install Selefra on MacOS or [download packages](https://github.com/selefra/selefra/releases)  to install Selefra on other platform.
 
@@ -81,13 +81,13 @@ Now,install Selefra with selefra/tap/selefra
 brew install selefra/tap/selefra
 ```
 
-2. Initialization project
+### 2. Initialization project
 
 ```bash
 selefra init selefra-demo && cd selefra-demo
 ```
 
-3. Build infrastructure Analysis code
+### 3. Build infrastructure Analysis code
 
 ```bash
 selefra apply 
@@ -97,15 +97,17 @@ selefra apply
 
 ## Community
 
-Selefra is a community driven project,we welcome you to file a bug,suggest an improvement ,or request a new feature .
+Selefra is a community driven project,we welcome you to file a bug,suggest an improvement ,or request a new feature.
 
 -  Join [Selefra Community Slack](https://selefra.slack.com) to discuss Selefra and join `Selefra Community Hour`.
--  Follow us on [Twitter](https://twitter.com/Selefra) and shard Selefra messages on Twitter.
--  Hava question and feature?Know on [Slack](https://selefra.slack.com) or open a [Github Issue](https://github.com/selefra/selefra/issues/new/choose)
+-  Follow us on [Twitter](https://twitter.com/SelefraCorp) and shard Selefra messages on Twitter.
+-  Have question and feature?Now on [Slack](https://selefra.slack.com) or open a [GitHub Issue](https://github.com/selefra/selefra/issues/new/choose)
+
 
 ## Contributing
 
-To contribute, visit [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra Roadmap](https://github.com/selefra/projects/1)
+To contribute, visit [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra roadmap](https://github.com/orgs/selefra/projects/1)
+
 
 ## License
 
