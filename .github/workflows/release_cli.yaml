@@ -33,8 +33,6 @@ jobs:
         run: |
           sed -i "s#{{version}}#${{ steps.get_version.outputs.VERSION }}#g" cmd/version/version.go 
           cat cmd/version/version.go
-      - name: tidy
-        run: go mod tidy
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
         with:
