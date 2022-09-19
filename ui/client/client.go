@@ -23,9 +23,6 @@ type Client struct {
 }
 
 func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId uuid.UUID) (*Client, error) {
-	if cfg.Connection == nil {
-		return nil, errors.New("connection configuration is not set")
-	}
 
 	hub := new(interface{})
 	pm := new(interface{})

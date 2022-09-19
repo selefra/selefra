@@ -15,9 +15,7 @@ limitations under the License.
 */
 package main
 
-import (
-	"github.com/selefra/selefra/cmd"
-)
+import "github.com/selefra/selefra/cmd"
 
 func main() {
 	cmd.Execute()

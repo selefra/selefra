@@ -38,7 +38,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 	wd, err := os.Getwd()
 	*global.WORKSPACE = wd
 	s := config.SelefraConfig{}
-	err = s.GetConfigByNode()
+	err = s.TestConfigByNode()
 	if err != nil {
 		ui.PrintErrorF(err.Error())
 		return nil

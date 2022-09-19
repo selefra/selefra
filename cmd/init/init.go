@@ -45,18 +45,6 @@ func NewInitCmd() *cobra.Command {
 func CreateYaml(ctx context.Context) error {
 	configYaml := config.SelefraConfig{}
 	configYaml.Selefra.CliVersion = version.Version
-	configYaml.Selefra.Connection = &config.DB{
-		Driver:   "",
-		Type:     "postgres",
-		Username: "postgres",
-		Password: "pass",
-		Host:     "localhost",
-		Port:     "5432",
-		Database: "postgres",
-		SSLMode:  "disable",
-		Extras:   nil,
-	}
-
 	storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN())
 
 	_, diag := postgresql_storage.NewPostgresqlStorage(ctx, storage)
@@ -173,7 +161,19 @@ func CreateYaml(ctx context.Context) error {
 			return nil
 		}
 	}
-	str, err := yaml.Marshal(configYaml)
+	waitStr, err := yaml.Marshal(configYaml)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return nil
+	}
+	var initConfigYaml config.SelefraConfigInit
+	err = yaml.Unmarshal(waitStr, &initConfigYaml)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return nil
+	}
+
+	str, err := yaml.Marshal(initConfigYaml)
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return nil

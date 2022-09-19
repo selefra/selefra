@@ -36,6 +36,10 @@ type SelefraConfig struct {
 	Selefra   Config    `yaml:"selefra"`
 	Providers yaml.Node `yaml:"providers"`
 }
+type SelefraConfigInit struct {
+	Selefra   ConfigInit `yaml:"selefra"`
+	Providers yaml.Node  `yaml:"providers"`
+}
 
 type RulesConfig struct {
 	Rules []Rule `yaml:"rules"`
@@ -78,8 +82,28 @@ type Config struct {
 	Connection *DB                 `yaml:"connection" mapstructure:"connection"`
 }
 
+type ConfigInit struct {
+	Name       string                  `yaml:"name" mapstructure:"name"`
+	CliVersion string                  `yaml:"cli_version" mapstructure:"cli_version"`
+	Providers  []*ProviderRequiredInit `yaml:"providers" mapstructure:"providers"`
+}
+
 func (c *Config) GetDSN() string {
-	db := c.Connection
+	var db *DB
+	db = c.Connection
+	if db == nil {
+		db = &DB{
+			Driver:   "",
+			Type:     "postgres",
+			Username: "postgres",
+			Password: "pass",
+			Host:     "localhost",
+			Port:     "5432",
+			Database: "postgres",
+			SSLMode:  "disable",
+			Extras:   nil,
+		}
+	}
 	DSN := "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
 	return DSN
 }
@@ -103,19 +127,19 @@ func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 	}
 	for _, file := range files {
 		if file.IsDir() {
-			dirConfigMap, err := readAllConfig(filepath.Join(dirname, file.Name()), configMap)
-			if err != nil {
-				return nil, err
-			}
-			for key, node := range dirConfigMap {
-				if configMap[key] == nil {
-					configMap[key] = node
-				} else {
-					for k, v := range node {
-						configMap[key][k] = v
-					}
-				}
-			}
+			//dirConfigMap, err := readAllConfig(filepath.Join(dirname, file.Name()), configMap)
+			//if err != nil {
+			//	return nil, err
+			//}
+			//for key, node := range dirConfigMap {
+			//	if configMap[key] == nil {
+			//		configMap[key] = node
+			//	} else {
+			//		for k, v := range node {
+			//			configMap[key][k] = v
+			//		}
+			//	}
+			//}
 		} else {
 			if path.Ext(file.Name()) == ".yaml" {
 				b, err := os.ReadFile(filepath.Join(dirname, file.Name()))
@@ -461,7 +485,7 @@ func GetRules() (RulesConfig, error) {
 	return rules, err
 }
 
-func (c *SelefraConfig) GetConfigByNode() error {
+func (c *SelefraConfig) TestConfigByNode() error {
 
 	configMap, err := readAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
@@ -474,7 +498,7 @@ func (c *SelefraConfig) GetConfigByNode() error {
 		var selefraMap = make(map[string]*yaml.Node)
 		selefraMap["cli_version"] = nil
 		selefraMap["name"] = nil
-		selefraMap["connection"] = nil
+		selefraMap["connection"] = new(yaml.Node)
 		selefraMap["providers"] = nil
 		bodyNode := new(yaml.Node)
 		err := yaml.Unmarshal([]byte(configStr), bodyNode)
@@ -486,26 +510,12 @@ func (c *SelefraConfig) GetConfigByNode() error {
 			return err
 		}
 
-		var connectionMap = make(map[string]*yaml.Node)
-		connectionMap["type"] = nil
-		connectionMap["username"] = nil
-		connectionMap["password"] = nil
-		connectionMap["host"] = nil
-		connectionMap["port"] = nil
-		connectionMap["database"] = nil
-		connectionMap["sslmode"] = nil
-
-		err = checkNode(connectionMap, selefraMap["connection"].Content, pathStr)
-		if err != nil {
-			return err
-		}
-
 		for _, node := range selefraMap["providers"].Content {
 			var providersMap = make(map[string]*yaml.Node)
 			providersMap["name"] = nil
 			providersMap["source"] = nil
 			providersMap["version"] = nil
-			providersMap["path"] = nil
+			providersMap["path"] = new(yaml.Node)
 
 			err = checkNode(providersMap, node.Content, pathStr)
 			if err != nil {
@@ -527,7 +537,8 @@ func (c *SelefraConfig) GetConfigByNode() error {
 			var ModuleMap = make(map[string]*yaml.Node)
 			ModuleMap["name"] = nil
 			ModuleMap["uses"] = nil
-			ModuleMap["input"] = nil
+			ModuleMap["input"] = new(yaml.Node)
+
 			err = checkNode(ModuleMap, node.Content, pathStr)
 			if err != nil {
 				return err
@@ -545,9 +556,9 @@ func (c *SelefraConfig) GetConfigByNode() error {
 		for _, node := range rulesNode.Content[0].Content[1].Content {
 			var ruleMap = make(map[string]*yaml.Node)
 			ruleMap["name"] = nil
-			ruleMap["input"] = nil
+			ruleMap["input"] = new(yaml.Node)
 			ruleMap["query"] = nil
-			ruleMap["interval"] = nil
+			ruleMap["interval"] = new(yaml.Node)
 			ruleMap["labels"] = nil
 			ruleMap["metadata"] = nil
 			ruleMap["output"] = nil
@@ -556,13 +567,10 @@ func (c *SelefraConfig) GetConfigByNode() error {
 			if err != nil {
 				return err
 			}
-			if ruleMap["input"] == nil {
-				continue
-			}
+
 			for i := range ruleMap["input"].Content {
 				if i%2 != 0 {
 					var ruleInputMap = make(map[string]*yaml.Node)
-
 					ruleInputMap["type"] = nil
 					ruleInputMap["description"] = nil
 					ruleInputMap["default"] = nil
@@ -606,9 +614,6 @@ func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr s
 		configMap[bodyNode[i].Value] = bodyNode[i+1]
 	}
 	for key, node := range configMap {
-		if key == "path" || key == "input" || key == "interval" {
-			continue
-		}
 		if node == nil {
 			errStr := fmt.Sprintf("%s Missing configuration %s", pathStr, key)
 			return errors.New(errStr)
@@ -640,6 +645,12 @@ type ProviderRequired struct {
 	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
 	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
 	Path    string  `yaml:"path" json:"path"`
+}
+
+type ProviderRequiredInit struct {
+	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
+	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
 }
 
 type DB struct {
