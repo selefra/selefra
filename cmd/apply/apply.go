@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/cmd/provider"
+	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/ui"
@@ -36,12 +37,18 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 	*global.WORKSPACE = wd
 	ctx := cmd.Context()
 	uid, _ := uuid.NewUUID()
+
+	s := config.SelefraConfig{}
+	err = test.CheckSelefraConfig(ctx, s)
+	if err != nil {
+		ui.PrintErrorLn("Client creation error:" + err.Error())
+		return nil
+	}
 	err = provider.Sync()
 	if err != nil {
 		ui.PrintErrorLn("Client creation error:" + err.Error())
 		return nil
 	}
-	s := config.SelefraConfig{}
 	err = s.GetConfig()
 	if err != nil {
 		ui.PrintErrorLn("Client creation error:" + err.Error())

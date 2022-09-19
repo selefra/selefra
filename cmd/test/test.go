@@ -36,9 +36,34 @@ func testFunc(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	wd, err := os.Getwd()
+	if err != nil {
+		ui.PrintErrorLn("GetWDError:" + err.Error())
+	}
 	*global.WORKSPACE = wd
 	s := config.SelefraConfig{}
-	err = s.TestConfigByNode()
+	return CheckSelefraConfig(ctx, s)
+}
+
+func checkConfig(ctx context.Context, c config.SelefraConfig) error {
+	var err error
+	if c.Selefra.CliVersion == "" {
+		err = errors.New("cliVersion is empty")
+		return err
+	}
+	if c.Selefra.Name == "" {
+		err = errors.New("name is empty")
+		return err
+	}
+	uid, _ := uuid.NewUUID()
+	_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid)
+	if e != nil {
+		return e
+	}
+	return nil
+}
+
+func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
+	err := s.TestConfigByNode()
 	if err != nil {
 		ui.PrintErrorF(err.Error())
 		return nil
@@ -53,7 +78,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 		ui.PrintErrorF("selefra configuration exception:%s", err.Error())
 		return nil
 	}
-	ui.PrintSuccessF("Client Verification Success")
+	ui.PrintSuccessF("Client Verification Success\n")
 	for _, p := range s.Selefra.Providers {
 		if p.Path == "" {
 			p.Path = utils.GetPathBySource(*p.Source)
@@ -110,28 +135,10 @@ func testFunc(cmd *cobra.Command, args []string) error {
 				continue
 			}
 		}
-		ui.PrintSuccessF("%s@%s check successfully", providersName, p.Version)
+		ui.PrintSuccessF("	%s@%s check successfully", providersName, p.Version)
 	}
 
-	ui.PrintSuccessF("Providers verification completed")
-	ui.PrintSuccessF("Profile verification complete")
-	return nil
-}
-
-func checkConfig(ctx context.Context, c config.SelefraConfig) error {
-	var err error
-	if c.Selefra.CliVersion == "" {
-		err = errors.New("cliVersion is empty")
-		return err
-	}
-	if c.Selefra.Name == "" {
-		err = errors.New("name is empty")
-		return err
-	}
-	uid, _ := uuid.NewUUID()
-	_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid)
-	if e != nil {
-		return e
-	}
+	ui.PrintSuccessF("\nProviders verification completed\n")
+	ui.PrintSuccessF("Profile verification complete\n")
 	return nil
 }
