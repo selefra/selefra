@@ -26,6 +26,9 @@ func Sync() error {
 	provider := registry.NewProviderRegistry(namespace)
 	ui.PrintSuccessF("Selefra has been successfully installed providers!\n")
 	ui.PrintSuccessF("Checking Selefra provider updates......\n")
+
+	var hasError bool
+	var ProviderRequires []*config.ProviderRequired
 	for _, p := range cof.Selefra.Providers {
 		prov := registry.Provider{
 			Name:    p.Name,
@@ -34,27 +37,35 @@ func Sync() error {
 		}
 		pp, err := provider.Download(ctx, prov, true)
 		if err != nil {
+			hasError = true
 			ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())
 			continue
 		} else {
+			p.Path = pp.Filepath
+			p.Version = pp.Version
+			ProviderRequires = append(ProviderRequires, p)
 			ui.PrintSuccessF("	%s@%s all ready updated!\n", p.Name, p.Version)
-
-			ui.PrintSuccessF("Selefra has been finished update providers!\n")
 		}
+	}
 
-		p.Path = pp.Filepath
-		p.Version = pp.Version
+	ui.PrintSuccessF("Selefra has been finished update providers!\n")
+
+	for _, p := range ProviderRequires {
 		err = fetch.Fetch(ctx, cof, p)
 		if err != nil {
 			ui.PrintErrorF("%s %s Synchronization failed：%s", p.Name, p.Version, err.Error())
+			hasError = true
 			continue
 		}
 	}
 
-	ui.PrintSuccessF(`
+	if hasError {
+		ui.PrintSuccessF(`
 This may be exception, view detailed exception in %s .
 
 Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community
 `, filepath.Join(*global.WORKSPACE, "logs"))
+	}
+
 	return nil
 }

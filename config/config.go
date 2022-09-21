@@ -6,13 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/selefra/selefra/ui"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v3"
 
 	"github.com/selefra/selefra/global"
 )
@@ -113,7 +112,7 @@ func (c *SelefraConfig) GetConfig() error {
 	return err
 }
 
-type YAML_KEY int
+type YamlKey int
 
 type ConfigMap map[string]map[string]string
 
@@ -329,11 +328,11 @@ func deepPathModules(moduleMap map[string]*yaml.Node) error {
 				if len(paths) > 0 {
 					tempNode := deepCopyYamlContent(node.Content[0].Content[1].Content[i])
 					node.Content[0].Content[1].Content = append(node.Content[0].Content[1].Content[:i], node.Content[0].Content[1].Content[i+1:]...)
-					for _, path := range paths {
+					for _, mPath := range paths {
 						waitAppendNode := deepCopyYamlContent(tempNode)
 						for i3 := range waitAppendNode.Content {
 							if waitAppendNode.Content[i3].Value == "uses" {
-								waitAppendNode.Content[i3+1].Value = path
+								waitAppendNode.Content[i3+1].Value = mPath
 							}
 						}
 						node.Content[0].Content[1].Content = append(node.Content[0].Content[1].Content, waitAppendNode)
@@ -461,8 +460,8 @@ func GetConfigPath() (string, error) {
 	}
 
 	clientMap := configMap[SELEFRA]
-	for path, _ := range clientMap {
-		return path, nil
+	for cofPath := range clientMap {
+		return cofPath, nil
 	}
 	return "", errors.New("No config file found")
 }
@@ -474,7 +473,10 @@ func GetRules() (RulesConfig, error) {
 		var baseRule RulesConfig
 		ws := strings.ReplaceAll(rulePath, *global.WORKSPACE+"/", "")
 		if strings.Index(ws, string(os.PathSeparator)) < 0 {
-			yaml.Unmarshal([]byte(rule), &baseRule)
+			err := yaml.Unmarshal([]byte(rule), &baseRule)
+			if err != nil {
+				return RulesConfig{}, err
+			}
 			for i := range baseRule.Rules {
 				baseRule.Rules[i].Path = rulePath
 				ui.PrintSuccessF("	%s - Rule %s: loading ... ", rulePath, baseRule.Rules[i].Name)
@@ -633,7 +635,10 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	if err != nil {
 		return config, err
 	}
-	yaml.Unmarshal(clientByte, &c)
+	err = yaml.Unmarshal(clientByte, &c)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return config, err
 	}
