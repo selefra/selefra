@@ -34,9 +34,9 @@ func newCmdProviderList() *cobra.Command {
 				ui.PrintErrorLn("Error:" + err.Error())
 				return nil
 			}
-			fmt.Printf("  %-13s%s\n", "Name", "Version")
+			fmt.Printf("  %-13s %-26s %s\n", "Name", "Source", "Version")
 			for _, provider := range configYaml.Selefra.Providers {
-				fmt.Printf("  %-13s%s\n", provider.Name, provider.Version)
+				fmt.Printf("  %-13s %-26s %s\n", provider.Name, *provider.Source, provider.Version)
 			}
 			return nil
 		},

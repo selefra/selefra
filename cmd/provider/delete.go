@@ -2,13 +2,13 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/registry"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"os"
 )
 
@@ -22,10 +22,9 @@ func newCmdProviderRemove() *cobra.Command {
 			for i := range names {
 				argsMap[names[i]] = true
 			}
-
+			deletedMap := make(map[string]bool)
 			wd, err := os.Getwd()
 			*global.WORKSPACE = wd
-			var providers []*config.ProviderRequired
 
 			var cof = &config.SelefraConfig{}
 
@@ -49,82 +48,45 @@ func newCmdProviderRemove() *cobra.Command {
 					},
 					Filepath: path,
 				}
-				if !argsMap[p.Name] {
-					providers = append(providers, p)
+				if !argsMap[p.Name] || deletedMap[p.Path] {
 					break
 				}
 
 				err := provider.DeleteProvider(prov)
 				if err != nil {
-					return err
+					if !errors.Is(err, os.ErrNotExist) {
+						ui.PrintWarningF("Failed to remove  %s: %s", p.Name, err.Error())
+					}
 				}
 				_, jsonPath, err := utils.Home()
 				if err != nil {
 					return err
 				}
 				c, err := os.ReadFile(jsonPath)
-				if err != nil {
-					return err
-				}
-				var configMap = make(map[string]string)
-				err = json.Unmarshal(c, &configMap)
-				if err != nil {
-					return err
-				}
-
-				delete(configMap, *p.Source)
-
-				c, err = json.Marshal(configMap)
-				if err != nil {
-					return err
-				}
-				err = os.Remove(jsonPath)
-				if err != nil {
-					return err
-				}
-				err = os.WriteFile(jsonPath, c, 0644)
-				if err != nil {
-					return err
-				}
-
-				for i := range cof.Selefra.Providers {
-					if cof.Selefra.Providers[i].Name == p.Name {
-						cof.Selefra.Providers = append(cof.Selefra.Providers[:i], cof.Selefra.Providers[i+1:]...)
+				if err == nil {
+					var configMap = make(map[string]string)
+					err = json.Unmarshal(c, &configMap)
+					if err != nil {
+						return err
 					}
-				}
-
-				for i := 0; i < len(cof.Providers.Content); i++ {
-					for ii := range cof.Providers.Content[i].Content {
-						if cof.Providers.Content[i].Content[ii].Kind == yaml.ScalarNode && cof.Providers.Content[0].Content[i].Value == "name" && cof.Providers.Content[0].Content[i+1].Value == p.Name {
-							if len(cof.Providers.Content) == 1 {
-								cof.Providers.Content = nil
-								i--
-								break
-							} else {
-								cof.Providers.Content = append(cof.Providers.Content[:i], cof.Providers.Content[i+1:]...)
-								i--
-								break
-							}
-						}
+					delete(configMap, *p.Source)
+					c, err = json.Marshal(configMap)
+					if err != nil {
+						return err
 					}
+					err = os.Remove(jsonPath)
+					if err != nil {
+						return err
+					}
+					err = os.WriteFile(jsonPath, c, 0644)
+					if err != nil {
+						return err
+					}
+					deletedMap[path] = true
 				}
-
 				ui.PrintSuccessF("Removed %s success", *p.Source)
-
 			}
-			configPath, err := config.GetConfigPath()
-			if err != nil {
-				return err
-			}
-			str, err := yaml.Marshal(cof)
-			if err != nil {
-				return err
-			}
-			err = os.Remove(configPath)
-			if err != nil {
-				return err
-			}
-			return os.WriteFile(configPath, str, 0644)
+			return nil
 		},
 	}
 
