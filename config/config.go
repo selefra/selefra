@@ -87,6 +87,36 @@ type ConfigInit struct {
 	Providers  []*ProviderRequiredInit `yaml:"providers" mapstructure:"providers"`
 }
 
+type ProviderRequired struct {
+	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
+	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
+	Path    string  `yaml:"path" json:"path"`
+}
+
+type ProviderRequiredInit struct {
+	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
+	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
+}
+
+type DB struct {
+	Driver string `yaml:"driver,omitempty" json:"driver,omitempty"`
+	// These params are mutually exclusive with DSN
+	Type     string   `yaml:"type,omitempty" json:"type,omitempty"`
+	Username string   `yaml:"username,omitempty" json:"username,omitempty"`
+	Password string   `yaml:"password,omitempty" json:"password,omitempty"`
+	Host     string   `yaml:"host,omitempty" json:"host,omitempty"`
+	Port     string   `yaml:"port,omitempty" json:"port,omitempty"`
+	Database string   `yaml:"database,omitempty" json:"database,omitempty"`
+	SSLMode  string   `yaml:"sslmode,omitempty" json:"sslmode,omitempty"`
+	Extras   []string `yaml:"extras,omitempty" json:"extras,omitempty"`
+}
+
+type YamlKey int
+
+type ConfigMap map[string]map[string]string
+
 func (c *Config) GetDSN() string {
 	var db *DB
 	db = c.Connection
@@ -111,10 +141,6 @@ func (c *SelefraConfig) GetConfig() error {
 	_, err := c.GetConfigWithViper()
 	return err
 }
-
-type YamlKey int
-
-type ConfigMap map[string]map[string]string
 
 func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 	if configMap == nil || len(configMap) == 0 {
@@ -643,32 +669,6 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 		return config, err
 	}
 	return config, nil
-}
-
-type ProviderRequired struct {
-	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
-	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
-	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
-	Path    string  `yaml:"path" json:"path"`
-}
-
-type ProviderRequiredInit struct {
-	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
-	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
-	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
-}
-
-type DB struct {
-	Driver string `yaml:"driver,omitempty" json:"driver,omitempty"`
-	// These params are mutually exclusive with DSN
-	Type     string   `yaml:"type,omitempty" json:"type,omitempty"`
-	Username string   `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string   `yaml:"password,omitempty" json:"password,omitempty"`
-	Host     string   `yaml:"host,omitempty" json:"host,omitempty"`
-	Port     string   `yaml:"port,omitempty" json:"port,omitempty"`
-	Database string   `yaml:"database,omitempty" json:"database,omitempty"`
-	SSLMode  string   `yaml:"sslmode,omitempty" json:"sslmode,omitempty"`
-	Extras   []string `yaml:"extras,omitempty" json:"extras,omitempty"`
 }
 
 func GetModulesByPath() ([]Module, error) {
