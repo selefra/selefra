@@ -2,12 +2,11 @@ package getter
 
 import (
 	"context"
+	"github.com/selefra/selefra/ui/progress"
 	"os"
 	"time"
 
 	getter "github.com/hashicorp/go-getter"
-
-	"github.com/selefra/selefra/ui/progress"
 )
 
 type Detector struct {
@@ -72,6 +71,27 @@ func Get(ctx context.Context, installPath, url string, options ...getter.ClientO
 		// Extra options provided by caller to overwrite default behavior
 		Options:          options,
 		ProgressListener: progress.CreateProgress(),
+	}
+
+	if err := client.Get(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ModuleGet(ctx context.Context, installPath, url string, options ...getter.ClientOption) error {
+	pwd, _ := os.Getwd()
+	client := getter.Client{
+		Src:           url,
+		Dst:           installPath,
+		Pwd:           pwd,
+		Mode:          getter.ClientModeDir,
+		Detectors:     detectors,
+		Decompressors: decompressors,
+		Getters:       getters,
+		Ctx:           ctx,
+		// Extra options provided by caller to overwrite default behavior
+		Options: options,
 	}
 
 	if err := client.Get(); err != nil {

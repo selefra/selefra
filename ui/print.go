@@ -1,25 +1,35 @@
 package ui
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/hashicorp/go-hclog"
-	"github.com/selefra/selefra-provider-sdk/provider/schema"
-	"github.com/selefra/selefra/pkg/logger"
+	"os"
 	"runtime"
+	"strings"
+	"time"
+
+	"github.com/fatih/color"
+	hclog "github.com/hashicorp/go-hclog"
+
+	"github.com/selefra/selefra-provider-sdk/provider/schema"
+	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/logger"
+	"github.com/selefra/selefra/pkg/ws"
 )
 
-var defaultLogger *logger.Logger
+var defaultLogger, _ = logger.NewLogger(logger.Config{
+	FileLogEnabled:    true,
+	ConsoleLogEnabled: false,
+	EncodeLogsAsJson:  true,
+	ConsoleNoColor:    true,
+	Source:            "client",
+	Directory:         "logs",
+	Level:             "info",
+})
 
-const (
-	prefixManaged   = "managed"
-	prefixUnmanaged = "unmanaged"
-	defaultAlias    = "default"
-)
-
-func InitLogger() {
-	defaultLogger, _ = logger.NewLogger(logger.Config{
+func StoLogger() (*logger.StoLogger, error) {
+	return logger.NewStoLogger(logger.Config{
 		FileLogEnabled:    true,
 		ConsoleLogEnabled: false,
 		EncodeLogsAsJson:  true,
@@ -30,6 +40,32 @@ func InitLogger() {
 	})
 }
 
+var wsLogger *os.File
+
+func init() {
+	flag := strings.ToLower(os.Getenv("SELEFRA_CLOUD_FLAG"))
+	if flag == "true" || flag == "enable" {
+		_, err := os.Stat("ws.log")
+		if err != nil {
+			if !os.IsNotExist(err) {
+				panic("Unknown error," + err.Error())
+			}
+			wsLogger, err = os.Create("ws.log")
+		} else {
+			wsLogger, err = os.OpenFile("ws.log", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+		}
+		if err != nil {
+			panic("ws log file open error," + err.Error())
+		}
+	}
+}
+
+const (
+	prefixManaged   = "managed"
+	prefixUnmanaged = "unmanaged"
+	defaultAlias    = "default"
+)
+
 var (
 	ErrorColor   = color.New(color.FgRed, color.Bold)
 	WarningColor = color.New(color.FgYellow, color.Bold)
@@ -38,8 +74,48 @@ var (
 	BaseColor    = color.New(color.FgBlack, color.Bold)
 )
 
+type LogJOSN struct {
+	Cmd   string    `json:"cmd"`
+	Stag  string    `json:"stag"`
+	Msg   string    `json:"msg"`
+	Time  time.Time `json:"time"`
+	Level string    `json:"level"`
+}
+
+func createLog(msg string, c *color.Color) string {
+	var level string
+	switch c {
+	case ErrorColor:
+		level = "error"
+	case WarningColor:
+		level = "warn"
+	case InfoColor:
+		level = "info"
+	case SuccessColor:
+		level = "success"
+	case BaseColor:
+		level = "base"
+	default:
+	}
+	l := LogJOSN{
+		Cmd:   global.CMD,
+		Stag:  global.STAG,
+		Msg:   msg,
+		Time:  time.Now(),
+		Level: level,
+	}
+	b, err := json.Marshal(l)
+	if err != nil {
+		return ""
+	}
+	sb := string(b)
+	if wsLogger != nil {
+		_, _ = wsLogger.WriteString(sb + "\n")
+	}
+	return sb
+}
+
 func PrintErrorF(format string, a ...interface{}) {
-	InitLogger()
 	_, f, l, ok := runtime.Caller(1)
 	if ok {
 		if defaultLogger != nil {
@@ -50,7 +126,6 @@ func PrintErrorF(format string, a ...interface{}) {
 }
 
 func PrintWarningF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Warn, format, a...)
 	}
@@ -59,7 +134,6 @@ func PrintWarningF(format string, a ...interface{}) {
 }
 
 func PrintSuccessF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, format, a...)
 	}
@@ -68,7 +142,6 @@ func PrintSuccessF(format string, a ...interface{}) {
 }
 
 func PrintInfoF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, format, a...)
 	}
@@ -76,7 +149,6 @@ func PrintInfoF(format string, a ...interface{}) {
 }
 
 func PrintErrorLn(a ...interface{}) {
-	InitLogger()
 	_, f, l, ok := runtime.Caller(1)
 	if ok {
 		if defaultLogger != nil {
@@ -87,7 +159,6 @@ func PrintErrorLn(a ...interface{}) {
 }
 
 func PrintWarningLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Warn, fmt.Sprintln(a...))
 	}
@@ -96,16 +167,13 @@ func PrintWarningLn(a ...interface{}) {
 }
 
 func PrintSuccessLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, fmt.Sprintln(a...))
 	}
 	PrintCustomizeLn(SuccessColor, a...)
-
 }
 
 func PrintInfoLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, fmt.Sprintln(a...))
 	}
@@ -113,15 +181,25 @@ func PrintInfoLn(a ...interface{}) {
 }
 
 func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
 	_, _ = c.Printf(format+"\n", a...)
 }
 
+func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	_, _ = c.Printf(format, a...)
+}
+
 func PrintCustomizeLn(c *color.Color, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintln(a...), c))
 	_, _ = c.Println(a...)
 }
 
+func PrintCustomizeLnNotShow(a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+}
+
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
-	InitLogger()
 	var err error
 	for i := range diagnostics {
 		switch diagnostics[i].Level() {
@@ -159,7 +237,6 @@ func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
 }
 
 func PrintDiagnostic(diagnostics []*schema.Diagnostic) error {
-	InitLogger()
 	var err error
 	for i := range diagnostics {
 		switch diagnostics[i].Level() {

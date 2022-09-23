@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
@@ -26,6 +27,7 @@ func NewFetchCmd() *cobra.Command {
 		Short: "Fetch resources from configured providers",
 		Long:  "Fetch resources from configured providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			global.CMD = "fetch"
 			ctx := cmd.Context()
 			var cof = &config.SelefraConfig{}
 
@@ -43,10 +45,8 @@ func NewFetchCmd() *cobra.Command {
 				}
 			}
 
-			ui.PrintSuccessF(`
-This may be exception, view detailed exception in %s.
-
-Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community`,
+			ui.PrintErrorF(`
+This may be exception, view detailed exception in %s.`,
 				filepath.Join(*global.WORKSPACE, "logs"))
 
 			return nil
@@ -63,13 +63,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	var providersName = utils.GetNameBySource(*p.Source)
 	ui.PrintSuccessF("%s@%s pull infrastructure data:\n", providersName, p.Version)
+	ui.PrintCustomizeLnNotShow(fmt.Sprintf("Pulling %s@%s Please wait for resource information ...", providersName, p.Version))
 	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
 		return err
 	}
 
-	storage := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	opt, err := json.Marshal(storage)
+	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	schema := config.GetSchemaKey(p)
+	storageOpt.SearchPath = schema
+	opt, err := json.Marshal(storageOpt)
 	if err != nil {
 		return err
 	}
@@ -119,9 +122,21 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
 		return errors.New("fetch provider create table error")
 	}
-
+	var tables []string
+	cp, err := cof.GetProvider(p.Name)
+	if err != nil {
+		return err
+	}
+	resources := cp.Resources
+	if len(resources) == 0 {
+		tables = append(tables, "*")
+	} else {
+		for i := range resources {
+			tables = append(tables, resources[i])
+		}
+	}
 	recv, err := provider.PullTables(ctx, &shard.PullTablesRequest{
-		Tables:        []string{"*"},
+		Tables:        tables,
 		MaxGoroutines: 100,
 		Timeout:       0,
 	})
@@ -133,12 +148,12 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	progbar.Add(p.Name+"@"+p.Version, -1)
 	success := 0
 	errorsN := 0
+	var total int64
 	for {
-		current := 0
 		res, err := recv.Recv()
-
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				progbar.Current(p.Name+"@"+p.Version, total, "done")
 				progbar.Done(p.Name + "@" + p.Version)
 				break
 			}
@@ -157,20 +172,12 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		errorsN = errorsNum
 		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
 		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
+		total = int64(res.TableCount)
 		if res.Diagnostics != nil && res.Diagnostics.HasError() {
 			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
 		}
-
-		if res != nil {
-			for s := range res.FinishedTables {
-				if res.FinishedTables[s] {
-					current++
-				}
-			}
-		}
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
-
 	ui.PrintSuccessF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
 	return nil
 }

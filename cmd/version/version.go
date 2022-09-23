@@ -2,6 +2,7 @@ package version
 
 import (
 	"fmt"
+	"github.com/selefra/selefra/global"
 	"github.com/spf13/cobra"
 )
 
@@ -13,8 +14,13 @@ func NewVersionCmd() *cobra.Command {
 		Short: "Print Selefra's version number",
 		Long:  "Print Selefra's version number",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(Version)
+			version()
 		},
 	}
 	return cmd
+}
+
+func version() {
+	global.CMD = "version"
+	fmt.Println(Version)
 }
