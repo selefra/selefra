@@ -13,6 +13,7 @@ import (
 )
 
 func newCmdProviderRemove() *cobra.Command {
+	global.CMD = "provider remove"
 	cmd := &cobra.Command{
 		Use:   "remove",
 		Short: "Remove one or more plugins from the download cache",
@@ -25,7 +26,11 @@ func newCmdProviderRemove() *cobra.Command {
 			deletedMap := make(map[string]bool)
 			wd, err := os.Getwd()
 			*global.WORKSPACE = wd
-
+			err = config.IsSelefra()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return err
+			}
 			var cof = &config.SelefraConfig{}
 
 			namespace, _, err := utils.Home()

@@ -45,6 +45,66 @@ func Home() (string, string, error) {
 	return registryPath, config, nil
 }
 
+func GetCredentialsPath() (string, error) {
+	path, _, err := Home()
+	if err != nil {
+		return "", err
+	}
+	cred := filepath.Join(path, "credentials.json")
+	_, err = os.Stat(cred)
+	if errors.Is(err, os.ErrNotExist) {
+		os.WriteFile(cred, []byte("{}"), 0644)
+	}
+	return cred, nil
+}
+
+func SetCredentials(token string) error {
+	credentials, err := GetCredentialsPath()
+	if err != nil {
+		return err
+	}
+	jsonbytes, err := os.ReadFile(credentials)
+	if err != nil {
+		return err
+	}
+	var jsonmap map[string]string
+	err = json.Unmarshal(jsonbytes, &jsonmap)
+	if err != nil {
+		return err
+	}
+	jsonmap["token"] = token
+	jsonbytes, err = json.Marshal(jsonmap)
+	if err != nil {
+		return err
+	}
+	err = os.Remove(credentials)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(credentials, jsonbytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetCredentialsToken() (string, error) {
+	path, err := GetCredentialsPath()
+	if err != nil {
+		return "", err
+	}
+	jsonbytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var jsonmap map[string]string
+	err = json.Unmarshal(jsonbytes, &jsonmap)
+	if err != nil {
+		return "", err
+	}
+	return jsonmap["token"], nil
+}
+
 func CreateSource(path, version string) string {
 	return "selefra/" + path + "@" + version
 }

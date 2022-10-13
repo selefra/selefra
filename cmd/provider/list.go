@@ -11,6 +11,7 @@ import (
 )
 
 func newCmdProviderList() *cobra.Command {
+	global.CMD = "provider list"
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List currently installed plugins",
@@ -22,7 +23,11 @@ func newCmdProviderList() *cobra.Command {
 				return nil
 			}
 			*global.WORKSPACE = wd
-
+			err = config.IsSelefra()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return err
+			}
 			b, err := config.GetClientStr()
 			if err != nil {
 				ui.PrintErrorLn("Error:" + err.Error())

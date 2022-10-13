@@ -49,7 +49,7 @@ func Sync() error {
 	}
 
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
-
+	global.STAG = "pull"
 	for _, p := range ProviderRequires {
 		err = fetch.Fetch(ctx, cof, p)
 		if err != nil {
@@ -60,10 +60,8 @@ func Sync() error {
 	}
 
 	if hasError {
-		ui.PrintSuccessF(`
+		ui.PrintErrorF(`
 This may be exception, view detailed exception in %s .
-
-Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community
 `, filepath.Join(*global.WORKSPACE, "logs"))
 	}
 

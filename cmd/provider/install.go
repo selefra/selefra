@@ -25,6 +25,7 @@ func newCmdProviderInstall() *cobra.Command {
 		Short: "Install one or more plugins",
 		Long:  "Install one or more plugins",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			global.CMD = "provider install"
 			ctx := cmd.Context()
 			wd, err := os.Getwd()
 			if err != nil {
@@ -32,6 +33,11 @@ func newCmdProviderInstall() *cobra.Command {
 				return nil
 			}
 			*global.WORKSPACE = wd
+			err = config.IsSelefra()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return err
+			}
 			namespace, _, err := utils.Home()
 			if err != nil {
 				ui.PrintErrorLn(err.Error())

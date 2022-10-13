@@ -6,11 +6,13 @@ import (
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/registry"
 	"github.com/selefra/selefra/pkg/utils"
+	"github.com/selefra/selefra/ui"
 	"github.com/spf13/cobra"
 	"os"
 )
 
 func newCmdProviderUpdate() *cobra.Command {
+	global.CMD = "provider update"
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update one or more plugins",
@@ -19,6 +21,11 @@ func newCmdProviderUpdate() *cobra.Command {
 
 			wd, err := os.Getwd()
 			*global.WORKSPACE = wd
+			err = config.IsSelefra()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return err
+			}
 			argsMap := make(map[string]bool)
 			for i := range args {
 				argsMap[args[i]] = true

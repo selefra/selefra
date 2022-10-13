@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/selefra/selefra/pkg/httpClient"
+	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -40,27 +42,35 @@ type SelefraConfigInit struct {
 	Providers yaml.Node  `yaml:"providers"`
 }
 
+type SelefraConfigInitWithLogin struct {
+	Selefra   ConfigInitWithLogin `yaml:"selefra"`
+	Providers yaml.Node           `yaml:"providers"`
+}
+
 type RulesConfig struct {
 	Rules []Rule `yaml:"rules"`
 }
 
 type Rule struct {
-	Path     string                            `yaml:"path"`
-	Name     string                            `yaml:"name"`
-	Input    map[string]map[string]interface{} `yaml:"input"`
-	Query    string                            `yaml:"query"`
-	Interval string                            `yaml:"interval"`
-	Labels   struct {
-		Severity string `yaml:"severity"`
-		Team     string `yaml:"team"`
-		Author   string `yaml:"author"`
-	} `yaml:"labels"`
+	Path     string                            `yaml:"path" json:"path"`
+	Name     string                            `yaml:"name" json:"name"`
+	Input    map[string]map[string]interface{} `yaml:"input" json:"-"`
+	Query    string                            `yaml:"query" json:"query"`
+	Labels   map[string]interface{}            `yaml:"labels" json:"labels"`
 	Metadata struct {
-		Id          string `yaml:"id"`
-		Summary     string `yaml:"summary"`
-		Description string `yaml:"description"`
+		Id                string `yaml:"id" json:"id"`
+		Severity          string `yaml:"severity" json:"severity"`
+		Provider          string `yaml:"provider" json:"provider"`
+		ResourceType      string `yaml:"resource_type" json:"resource_type"`
+		ResourceAccountId string `yaml:"resource_account_id" json:"resource_account_id"`
+		ResourceId        string `yaml:"resource_id" json:"resource_id"`
+		ResourceRegion    string `yaml:"resource_region" json:"resource_region"`
+		Summary           string `yaml:"summary" json:"summary"`
+		Remediation       string `yaml:"remediation" json:"remediation"`
+		Title             string `yaml:"title" json:"title"`
+		Description       string `yaml:"description" json:"description"`
 	}
-	Output string `yaml:"output"`
+	Output string `yaml:"output" json:"-"`
 }
 
 type ModuleConfig struct {
@@ -74,7 +84,13 @@ type Module struct {
 	Children *ModuleConfig          `yaml:"-" json:"children"`
 }
 
+type Cloud struct {
+	Project      string `yaml:"project" mapstructure:"project"`
+	Organization string `yaml:"organization" mapstructure:"organization"`
+}
+
 type Config struct {
+	Cloud      *Cloud              `yaml:"cloud" mapstructure:"cloud"`
 	Name       string              `yaml:"name" mapstructure:"name"`
 	CliVersion string              `yaml:"cli_version" mapstructure:"cli_version"`
 	Providers  []*ProviderRequired `yaml:"providers" mapstructure:"providers"`
@@ -82,6 +98,13 @@ type Config struct {
 }
 
 type ConfigInit struct {
+	Name       string                  `yaml:"name" mapstructure:"name"`
+	CliVersion string                  `yaml:"cli_version" mapstructure:"cli_version"`
+	Providers  []*ProviderRequiredInit `yaml:"providers" mapstructure:"providers"`
+}
+
+type ConfigInitWithLogin struct {
+	Cloud      *Cloud                  `yaml:"cloud" mapstructure:"cloud"`
 	Name       string                  `yaml:"name" mapstructure:"name"`
 	CliVersion string                  `yaml:"cli_version" mapstructure:"cli_version"`
 	Providers  []*ProviderRequiredInit `yaml:"providers" mapstructure:"providers"`
@@ -116,9 +139,21 @@ type DB struct {
 type YamlKey int
 
 type ConfigMap map[string]map[string]string
+type FileMap map[string]string
 
 func (c *Config) GetDSN() string {
 	var db *DB
+
+	token, err := utils.GetCredentialsToken()
+	if token != "" && err == nil {
+		DSN, err := httpClient.GetDsn(token)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return ""
+		}
+		return DSN
+
+	}
 	db = c.Connection
 	if db == nil {
 		db = &DB{
@@ -142,6 +177,45 @@ func (c *SelefraConfig) GetConfig() error {
 	return err
 }
 
+func GetAllConfig(dirname string, fileMap FileMap) (FileMap, error) {
+	if fileMap == nil || len(fileMap) == 0 {
+		fileMap = make(FileMap)
+	}
+	files, err := os.ReadDir(dirname)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			_, err := GetAllConfig(filepath.Join(dirname, file.Name()), fileMap)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if path.Ext(file.Name()) == ".yaml" {
+				b, err := os.ReadFile(filepath.Join(dirname, file.Name()))
+				if err != nil {
+					fmt.Println(err)
+					return nil, err
+				}
+				fileMap[filepath.Join(dirname, file.Name())] = string(b)
+			}
+		}
+	}
+	return fileMap, nil
+}
+
+func IsSelefra() error {
+	configMap, err := readAllConfig(*global.WORKSPACE, nil)
+	if err != nil {
+		return err
+	}
+	if configMap[SELEFRA] == nil {
+		return errors.New("this workspace is not selefra workspace")
+	}
+	return nil
+}
+
 func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 	if configMap == nil || len(configMap) == 0 {
 		configMap = make(ConfigMap)
@@ -151,21 +225,7 @@ func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 		return nil, err
 	}
 	for _, file := range files {
-		if file.IsDir() {
-			//dirConfigMap, err := readAllConfig(filepath.Join(dirname, file.Name()), configMap)
-			//if err != nil {
-			//	return nil, err
-			//}
-			//for key, node := range dirConfigMap {
-			//	if configMap[key] == nil {
-			//		configMap[key] = node
-			//	} else {
-			//		for k, v := range node {
-			//			configMap[key][k] = v
-			//		}
-			//	}
-			//}
-		} else {
+		if !file.IsDir() {
 			if path.Ext(file.Name()) == ".yaml" {
 				b, err := os.ReadFile(filepath.Join(dirname, file.Name()))
 				if err != nil {
@@ -524,6 +584,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 
 	for pathStr, configStr := range clientMap {
 		var selefraMap = make(map[string]*yaml.Node)
+		selefraMap["cloud"] = new(yaml.Node)
 		selefraMap["cli_version"] = nil
 		selefraMap["name"] = nil
 		selefraMap["connection"] = new(yaml.Node)
@@ -586,8 +647,8 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			ruleMap["name"] = nil
 			ruleMap["input"] = new(yaml.Node)
 			ruleMap["query"] = nil
-			ruleMap["interval"] = new(yaml.Node)
 			ruleMap["labels"] = nil
+			ruleMap["interval"] = new(yaml.Node)
 			ruleMap["metadata"] = nil
 			ruleMap["output"] = nil
 			err = checkNode(ruleMap, node.Content, pathStr)
@@ -603,6 +664,21 @@ func (c *SelefraConfig) TestConfigByNode() error {
 					ruleInputMap["description"] = nil
 					ruleInputMap["default"] = nil
 					err = checkNode(ruleInputMap, ruleMap["input"].Content[i].Content, pathStr)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			for i := range ruleMap["metadata"].Content {
+				if i%2 != 0 {
+					var ruleMetadataMap = make(map[string]*yaml.Node)
+					ruleMetadataMap["id"] = nil
+					ruleMetadataMap["severity"] = nil
+					ruleMetadataMap["service_type"] = nil
+					ruleMetadataMap["title"] = nil
+					ruleMetadataMap["description"] = nil
+					err = checkNode(ruleMetadataMap, ruleMap["input"].Content[i].Content, pathStr)
 					if err != nil {
 						return err
 					}

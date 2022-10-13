@@ -26,6 +26,7 @@ func NewFetchCmd() *cobra.Command {
 		Short: "Fetch resources from configured providers",
 		Long:  "Fetch resources from configured providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			global.CMD = "fetch"
 			ctx := cmd.Context()
 			var cof = &config.SelefraConfig{}
 
@@ -43,10 +44,8 @@ func NewFetchCmd() *cobra.Command {
 				}
 			}
 
-			ui.PrintSuccessF(`
-This may be exception, view detailed exception in %s.
-
-Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community`,
+			ui.PrintErrorF(`
+This may be exception, view detailed exception in %s.`,
 				filepath.Join(*global.WORKSPACE, "logs"))
 
 			return nil

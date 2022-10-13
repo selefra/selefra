@@ -3,3 +3,8 @@ package global
 import "github.com/selefra/selefra-utils/pkg/pointer"
 
 var WORKSPACE = pointer.ToStringPointer(".")
+var LOGINTOKEN = ""
+var CMD = ""
+var STAG = ""
+
+const SERVER = "dev-api.selefra.io"

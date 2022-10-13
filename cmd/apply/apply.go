@@ -3,11 +3,15 @@ package apply
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/httpClient"
+	"github.com/selefra/selefra/pkg/utils"
+	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/client"
 	"github.com/spf13/cobra"
@@ -28,40 +32,82 @@ func NewApplyCmd() *cobra.Command {
 	}
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
+
 	return cmd
 }
 
 func applyFunc(cmd *cobra.Command, args []string) error {
-
+	global.CMD = "apply"
 	wd, err := os.Getwd()
 	*global.WORKSPACE = wd
+	err = config.IsSelefra()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
+	s := config.SelefraConfig{}
+	err = s.GetConfig()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
+	token, err := utils.GetCredentialsToken()
+	if token != "" && s.Selefra.Cloud != nil && err == nil {
+		if err != nil {
+			ui.PrintErrorLn("The token is invalid. Please execute selefra to log out or log in again")
+			return nil
+		}
+		global.LOGINTOKEN = token
+		res, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project)
+		if err == nil {
+			fmt.Println(res.Data.TaskId)
+			err := ws.Regis(token, res.Data.TaskId)
+			if err != nil {
+				ui.PrintWarningLn(err.Error())
+			}
+		}
+	}
 	ctx := cmd.Context()
 	uid, _ := uuid.NewUUID()
-
-	s := config.SelefraConfig{}
+	global.STAG = "initializing"
 	err = test.CheckSelefraConfig(ctx, s)
 	if err != nil {
-		ui.PrintErrorLn("Client creation error:" + err.Error())
+		ui.PrintErrorLn(err.Error())
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
 		return nil
 	}
 	err = provider.Sync()
 	if err != nil {
-		ui.PrintErrorLn("Client creation error:" + err.Error())
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
+		ui.PrintErrorLn(err.Error())
 		return nil
 	}
 	err = s.GetConfig()
 	if err != nil {
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
 		ui.PrintErrorLn("Client creation error:" + err.Error())
 		return nil
 	}
 	c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid)
 	if e != nil {
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
 		ui.PrintErrorLn("Client creation error:" + e.Error())
 		return nil
 	}
-
+	global.STAG = "infrastructure"
 	modules, err := config.GetModulesByPath()
 	if err != nil {
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			err = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
 		ui.PrintErrorLn("Client creation error:" + err.Error())
 		return nil
 	}
@@ -77,11 +123,45 @@ Loading Selefra analysis code ...
 	}
 
 	ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
-	RunRules(ctx, c, mRules)
+	var project string
+	if token != "" && s.Selefra.Cloud != nil {
+		project = s.Selefra.Cloud.Project
+	} else {
+		project = ""
+	}
+	err = RunRules(ctx, c, project, mRules)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return nil
+	}
+	if token != "" && s.Selefra.Cloud != nil {
+		err = UploadWorkspace(project)
+		if err != nil {
+			err = httpClient.SetupStag(token, project, httpClient.Failed)
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+	}
 	return nil
 }
 
-func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
+func UploadWorkspace(project string) error {
+	fileMap, err := config.GetAllConfig(".", nil)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
+	err = httpClient.UploadWorkplace(global.LOGINTOKEN, project, fileMap)
+	if err != nil {
+		ui.PrintErrorLn(err)
+		return err
+	}
+	return nil
+}
+
+func RunRules(ctx context.Context, c *client.Client, project string, rules []config.Rule) error {
+
+	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
 		var params = make(map[string]interface{})
 		for key, input := range rule.Input {
@@ -93,7 +173,7 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		desc, err := fmtTemplate(rule.Metadata.Description, params)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
-			return
+			return err
 		}
 		ui.PrintSuccessLn("	" + desc)
 
@@ -101,7 +181,7 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		queryStr, err := fmtTemplate(rule.Query, params)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
-			return
+			return err
 		}
 		ui.PrintSuccessLn("	" + queryStr)
 
@@ -118,6 +198,7 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 		column := table.GetColumnNames()
 		rows := table.GetMatrix()
 		ui.PrintSuccessLn("Output")
+		var outMetaData []httpClient.Metadata
 		for _, row := range rows {
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
@@ -128,11 +209,47 @@ func RunRules(ctx context.Context, c *client.Client, rules []config.Rule) {
 			out, err := fmtTemplate(outPut, outMap)
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
-				return
+				return err
 			}
+			ResourceAccountId, _ := fmtTemplate(rule.Metadata.ResourceAccountId, outMap)
+			ResourceId, _ := fmtTemplate(rule.Metadata.ResourceId, outMap)
+			ResourceRegion, _ := fmtTemplate(rule.Metadata.ResourceRegion, outMap)
+			outMetaData = append(outMetaData, httpClient.Metadata{
+				Id:                rule.Metadata.Id,
+				Severity:          rule.Metadata.Severity,
+				ResourceType:      rule.Metadata.ResourceType,
+				Provider:          rule.Metadata.Provider,
+				ResourceAccountId: ResourceAccountId,
+				ResourceId:        ResourceId,
+				ResourceRegion:    ResourceRegion,
+				Title:             rule.Metadata.Title,
+				Description:       desc,
+				Output:            out,
+			})
 			ui.PrintSuccessLn("	" + out)
 		}
+
+		if global.LOGINTOKEN != "" {
+
+			var req httpClient.OutputReq
+			req.Name = rule.Name
+			req.Query = rule.Query
+			req.Labels = rule.Labels
+			req.Metadata = outMetaData
+			outputReq = append(outputReq, req)
+		}
 	}
+	if global.LOGINTOKEN != "" {
+		err := httpClient.OutPut(global.LOGINTOKEN, project, outputReq)
+		if err != nil {
+			ui.PrintErrorLn(err)
+		}
+		err = ws.Completed()
+		if err != nil {
+			ui.PrintErrorLn(err)
+		}
+	}
+	return nil
 }
 
 func CreateRulesByModule(modules []config.Module) []config.Rule {

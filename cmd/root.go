@@ -5,6 +5,8 @@ import (
 	"github.com/selefra/selefra/cmd/apply"
 	"github.com/selefra/selefra/cmd/fetch"
 	initCmd "github.com/selefra/selefra/cmd/init"
+	"github.com/selefra/selefra/cmd/login"
+	"github.com/selefra/selefra/cmd/logout"
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/query"
 	"github.com/selefra/selefra/cmd/test"
@@ -15,8 +17,6 @@ import (
 )
 
 var group = make(map[string][]*cobra.Command)
-
-var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -44,6 +44,8 @@ func init() {
 		initCmd.NewInitCmd(),
 		test.NewTestCmd(),
 		apply.NewApplyCmd(),
+		login.NewLoginCmd(),
+		logout.NewLogoutCmd(),
 	}
 
 	group["other"] = []*cobra.Command{
