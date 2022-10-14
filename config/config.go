@@ -79,7 +79,7 @@ type ModuleConfig struct {
 
 type Module struct {
 	Name     string                 `yaml:"name" json:"name"`
-	Uses     string                 `yaml:"uses" json:"uses"`
+	Uses     []string               `yaml:"uses" json:"uses"`
 	Input    map[string]interface{} `yaml:"input" json:"input"`
 	Children *ModuleConfig          `yaml:"-" json:"children"`
 }
@@ -454,9 +454,11 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 
 	for _, moduleConfig := range ModulesMap {
 		for i := range moduleConfig.Modules {
-			if ModulesMap[moduleConfig.Modules[i].Uses] != nil {
-				usedModuleMap[moduleConfig.Modules[i].Uses] = true
-				moduleConfig.Modules[i].Children = ModulesMap[moduleConfig.Modules[i].Uses]
+			for _, use := range moduleConfig.Modules[i].Uses {
+				if ModulesMap[use] != nil {
+					usedModuleMap[use] = true
+					moduleConfig.Modules[i].Children = ModulesMap[use]
+				}
 			}
 		}
 	}
@@ -515,9 +517,11 @@ func makeCyclePathMap(nodesMap map[string]*yaml.Node) (map[string][]string, erro
 			return nil, err
 		}
 		for _, module := range modules.Modules {
-			waitPath := module.Uses
-			if nodesMap[waitPath] != nil {
-				userMap[modulePath] = append(userMap[modulePath], waitPath)
+			for _, use := range module.Uses {
+				waitPath := use
+				if nodesMap[waitPath] != nil {
+					userMap[modulePath] = append(userMap[modulePath], waitPath)
+				}
 			}
 		}
 	}

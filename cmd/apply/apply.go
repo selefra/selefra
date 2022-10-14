@@ -70,20 +70,20 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-	err = test.CheckSelefraConfig(ctx, s)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		if token != "" && s.Selefra.Cloud != nil && err == nil {
-			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-		}
-		return nil
-	}
 	err = provider.Sync()
 	if err != nil {
 		if token != "" && s.Selefra.Cloud != nil && err == nil {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
 		}
 		ui.PrintErrorLn(err.Error())
+		return nil
+	}
+	err = test.CheckSelefraConfig(ctx, s)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
 		return nil
 	}
 	err = s.GetConfig()
@@ -278,50 +278,54 @@ func RunRulesWithoutModule() *[]config.Rule {
 }
 
 func RunPathModule(module config.Module) *[]config.Rule {
-	b, err := os.ReadFile(module.Uses)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		return nil
-	}
-	var baseRule config.RulesConfig
-	err = yaml.Unmarshal(b, &baseRule)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		return nil
+	var resRule config.RulesConfig
+	for _, use := range module.Uses {
+		b, err := os.ReadFile(use)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+		var baseRule config.RulesConfig
+		err = yaml.Unmarshal(b, &baseRule)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+		var ruleConfig config.RulesConfig
+		err = yaml.Unmarshal([]byte(string(b)), &ruleConfig)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+		for i := range ruleConfig.Rules {
+			ruleConfig.Rules[i].Output = baseRule.Rules[i].Output
+			ruleConfig.Rules[i].Query = baseRule.Rules[i].Query
+			ruleConfig.Rules[i].Path = use
+			if strings.HasPrefix(ruleConfig.Rules[i].Query, ".") {
+				dir := filepath.Dir(use)
+				sqlByte, err := os.ReadFile(filepath.Join(dir, ruleConfig.Rules[i].Query))
+				if err != nil {
+					ui.PrintErrorF("sql open error:%s", err.Error())
+					return nil
+				}
+				ruleConfig.Rules[i].Query = string(sqlByte)
+			}
+			for key, input := range ruleConfig.Rules[i].Input {
+				if module.Input[key] != nil {
+					input["default"] = module.Input[key]
+				}
+			}
+			ui.PrintSuccessF("	%s - Rule %s: loading ... ", use, baseRule.Rules[i].Name)
+		}
+		resRule.Rules = append(resRule.Rules, ruleConfig.Rules...)
 	}
 
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		return nil
-	}
-	var ruleConfig config.RulesConfig
-	err = yaml.Unmarshal([]byte(string(b)), &ruleConfig)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		return nil
-	}
-	for i := range ruleConfig.Rules {
-		ruleConfig.Rules[i].Output = baseRule.Rules[i].Output
-		ruleConfig.Rules[i].Query = baseRule.Rules[i].Query
-		ruleConfig.Rules[i].Path = module.Uses
-		if strings.HasPrefix(ruleConfig.Rules[i].Query, ".") {
-			dir := filepath.Dir(module.Uses)
-			sqlByte, err := os.ReadFile(filepath.Join(dir, ruleConfig.Rules[i].Query))
-			if err != nil {
-				ui.PrintErrorF("sql open error:%s", err.Error())
-				return nil
-			}
-			ruleConfig.Rules[i].Query = string(sqlByte)
-		}
-		for key, input := range ruleConfig.Rules[i].Input {
-			if module.Input[key] != nil {
-				input["default"] = module.Input[key]
-			}
-		}
-		ui.PrintSuccessF("	%s - Rule %s: loading ... ", module.Uses, baseRule.Rules[i].Name)
-	}
-
-	return &ruleConfig.Rules
+	return &resRule.Rules
 }
 
 func fmtTemplate(temp string, params map[string]interface{}) (string, error) {

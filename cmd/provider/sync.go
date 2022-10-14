@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"github.com/selefra/selefra/cmd/fetch"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/registry"
@@ -43,6 +44,7 @@ func Sync() error {
 		} else {
 			p.Path = pp.Filepath
 			p.Version = pp.Version
+			tools.SetSelefraProvider(pp, nil)
 			ProviderRequires = append(ProviderRequires, p)
 			ui.PrintSuccessF("	%s@%s all ready updated!\n", p.Name, p.Version)
 		}

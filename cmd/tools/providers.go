@@ -78,7 +78,6 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 }
 
 func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.SelefraConfig) {
-
 	source := utils.CreateSource(provider.Name, provider.Version)
 
 	_, configPath, err := utils.Home()
@@ -101,10 +100,12 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 	}
 
 	err = os.WriteFile(configPath, pathMapJson, 0644)
+	if selefraConfig != nil {
+		selefraConfig.Selefra.Providers = append(selefraConfig.Selefra.Providers, &config.ProviderRequired{
+			Name:    provider.Name,
+			Source:  &source,
+			Version: provider.Version,
+		})
+	}
 
-	selefraConfig.Selefra.Providers = append(selefraConfig.Selefra.Providers, &config.ProviderRequired{
-		Name:    provider.Name,
-		Source:  &source,
-		Version: provider.Version,
-	})
 }
