@@ -8,6 +8,7 @@ import (
 	"github.com/selefra/selefra/global"
 	"io"
 	"net/http"
+	"os"
 )
 
 type OutputReq struct {
@@ -126,6 +127,7 @@ func CreateTask(token, project_name string) (*Res[TaskData], error) {
 	var info = make(map[string]string)
 	info["token"] = token
 	info["project_name"] = project_name
+	info["task_source"] = os.Getenv("SELEFRA_TASK_SOURCE")
 	res, err := CliHttpClient[TaskData]("POST", "/cli/create_task", info)
 	if err != nil {
 		return nil, err

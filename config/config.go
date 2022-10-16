@@ -263,7 +263,12 @@ func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 								for i, node := range ModulesCount {
 									if node.Value == "uses" {
 										for _, use := range ModulesCount[i+1].Content {
-											p := filepath.Join(dirname, use.Value)
+											var p string
+											if filepath.IsAbs(use.Value) {
+												p = use.Value
+											} else {
+												p = filepath.Join(dirname, use.Value)
+											}
 											ruleb, err := os.ReadFile(p)
 											if err != nil {
 												return nil, fmt.Errorf("check rules:%s", err.Error())

@@ -169,6 +169,9 @@ func PrintCustomizeLn(c *color.Color, a ...interface{}) {
 	_, _ = c.Println(a...)
 }
 
+func PrintCustomizeLnNotShow(a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+}
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
 	InitLogger()
 	var err error
