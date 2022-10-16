@@ -3,7 +3,6 @@ package apply
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
@@ -58,9 +57,13 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 		global.LOGINTOKEN = token
+		_, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
 		res, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project)
 		if err == nil {
-			fmt.Println(res.Data.TaskId)
 			err := ws.Regis(token, res.Data.TaskId)
 			if err != nil {
 				ui.PrintWarningLn(err.Error())
@@ -329,7 +332,7 @@ func RunPathModule(module config.Module) *[]config.Rule {
 }
 
 func fmtTemplate(temp string, params map[string]interface{}) (string, error) {
-	t, err := template.New("test").Parse(temp)
+	t, err := template.New("temp").Parse(temp)
 	if err != nil {
 		ui.PrintErrorLn("Format rule template error:", err.Error())
 		return "", err

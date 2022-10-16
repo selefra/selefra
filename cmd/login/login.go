@@ -71,6 +71,7 @@ func CliLogin(token string) error {
 func Success(orgName, userName, token string) {
 	err := utils.SetCredentials(token)
 	global.LOGINTOKEN = token
+	global.ORGNAME = orgName
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return

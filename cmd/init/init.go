@@ -105,8 +105,7 @@ func CreateYaml(cmd *cobra.Command) (*config.SelefraConfig, error) {
 		} else {
 			configYaml.Selefra.Cloud.Project = projectName
 		}
-		orgName, err := httpClient.CreateProject(token, configYaml.Selefra.Cloud.Project)
-		configYaml.Selefra.Cloud.Organization = orgName
+		configYaml.Selefra.Cloud.Organization = global.ORGNAME
 		if err != nil {
 			return &configYaml, err
 		}

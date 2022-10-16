@@ -20,6 +20,11 @@ func NewLogoutCmd() *cobra.Command {
 }
 
 func RunFunc(cmd *cobra.Command, args []string) error {
+	path, err := utils.GetCredentialsPath()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return nil
+	}
 	token, err := utils.GetCredentialsToken()
 	if token != "" && err == nil {
 		err := httpClient.Logout(token)
@@ -32,6 +37,10 @@ func RunFunc(cmd *cobra.Command, args []string) error {
 			ui.PrintErrorLn(err.Error())
 		}
 	}
-	ui.PrintSuccessLn("You have been logged out")
+
+	ui.PrintSuccessF(`Removing the stored credentials for app.selefra.io from the following file:
+    %s
+
+Success! Selefra has removed the stored Access Token for app.selefra.io.`, path)
 	return nil
 }
