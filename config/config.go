@@ -258,6 +258,24 @@ func readAllConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
 								configMap[node.Content[0].Content[i].Value] = make(map[string]string)
 							}
 							configMap[node.Content[0].Content[i].Value][filepath.Join(dirname, file.Name())] = string(b)
+							if node.Content[0].Content[i].Value == "modules" {
+								ModulesCount := node.Content[0].Content[i+1].Content[0].Content
+								for i, node := range ModulesCount {
+									if node.Value == "uses" {
+										for _, use := range ModulesCount[i+1].Content {
+											p := filepath.Join(dirname, use.Value)
+											ruleb, err := os.ReadFile(p)
+											if err != nil {
+												return nil, fmt.Errorf("check rules:%s", err.Error())
+											}
+											if configMap[RULES] == nil {
+												configMap[RULES] = make(map[string]string)
+											}
+											configMap[RULES][p] = string(ruleb)
+										}
+									}
+								}
+							}
 						}
 					}
 				}
@@ -598,19 +616,19 @@ func (c *SelefraConfig) TestConfigByNode() error {
 		if err != nil {
 			return err
 		}
-		err = checkNode(selefraMap, bodyNode.Content[0].Content[1].Content, pathStr)
+		err = checkNode(selefraMap, bodyNode.Content[0].Content[1].Content, pathStr, "selefra:")
 		if err != nil {
 			return err
 		}
 
-		for _, node := range selefraMap["providers"].Content {
+		for index, node := range selefraMap["providers"].Content {
 			var providersMap = make(map[string]*yaml.Node)
 			providersMap["name"] = nil
 			providersMap["source"] = nil
 			providersMap["version"] = nil
 			providersMap["path"] = new(yaml.Node)
-
-			err = checkNode(providersMap, node.Content, pathStr)
+			yamlPath := fmt.Sprintf("selefra.providers[%d]:", index)
+			err = checkNode(providersMap, node.Content, pathStr, yamlPath)
 			if err != nil {
 				return err
 			}
@@ -632,7 +650,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			ModuleMap["uses"] = nil
 			ModuleMap["input"] = new(yaml.Node)
 
-			err = checkNode(ModuleMap, node.Content, pathStr)
+			err = checkNode(ModuleMap, node.Content, pathStr, "modules:")
 			if err != nil {
 				return err
 			}
@@ -646,7 +664,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 		if err != nil {
 			return err
 		}
-		for _, node := range rulesNode.Content[0].Content[1].Content {
+		for index, node := range rulesNode.Content[0].Content[1].Content {
 			var ruleMap = make(map[string]*yaml.Node)
 			ruleMap["name"] = nil
 			ruleMap["input"] = new(yaml.Node)
@@ -655,7 +673,8 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			ruleMap["interval"] = new(yaml.Node)
 			ruleMap["metadata"] = nil
 			ruleMap["output"] = nil
-			err = checkNode(ruleMap, node.Content, pathStr)
+			yamlPath := fmt.Sprintf("rules[%d]", index)
+			err = checkNode(ruleMap, node.Content, pathStr, yamlPath+":")
 
 			if err != nil {
 				return err
@@ -667,7 +686,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 					ruleInputMap["type"] = nil
 					ruleInputMap["description"] = nil
 					ruleInputMap["default"] = nil
-					err = checkNode(ruleInputMap, ruleMap["input"].Content[i].Content, pathStr)
+					err = checkNode(ruleInputMap, ruleMap["input"].Content[i].Content, pathStr, yamlPath+"input:")
 					if err != nil {
 						return err
 					}
@@ -679,10 +698,15 @@ func (c *SelefraConfig) TestConfigByNode() error {
 					var ruleMetadataMap = make(map[string]*yaml.Node)
 					ruleMetadataMap["id"] = nil
 					ruleMetadataMap["severity"] = nil
-					ruleMetadataMap["service_type"] = nil
+					ruleMetadataMap["provider"] = nil
+					ruleMetadataMap["resource_type"] = nil
+					ruleMetadataMap["resource_account_id"] = nil
+					ruleMetadataMap["resource_id"] = nil
+					ruleMetadataMap["resource_region"] = nil
+					ruleMetadataMap["remediation"] = nil
 					ruleMetadataMap["title"] = nil
 					ruleMetadataMap["description"] = nil
-					err = checkNode(ruleMetadataMap, ruleMap["input"].Content[i].Content, pathStr)
+					err = checkNode(ruleMetadataMap, ruleMap["metadata"].Content, pathStr, yamlPath+"metadata:")
 					if err != nil {
 						return err
 					}
@@ -704,10 +728,9 @@ func hasKeys(key string, keys []string) bool {
 	return false
 }
 
-func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr string) error {
+func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr string, yamlPath string) error {
 	var keys []string
 	for s := range configMap {
-
 		keys = append(keys, s)
 	}
 	for i := range bodyNode {
@@ -723,7 +746,7 @@ func checkNode(configMap map[string]*yaml.Node, bodyNode []*yaml.Node, pathStr s
 	}
 	for key, node := range configMap {
 		if node == nil {
-			errStr := fmt.Sprintf("%s Missing configuration %s", pathStr, key)
+			errStr := fmt.Sprintf("%s %s Missing configuration %s", pathStr, yamlPath, key)
 			return errors.New(errStr)
 		}
 	}
