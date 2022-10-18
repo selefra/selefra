@@ -1,0 +1,4 @@
+modules:
+  - name: AWS_Security_Demo
+    uses:
+    - ./rules/iam_mfa.yaml

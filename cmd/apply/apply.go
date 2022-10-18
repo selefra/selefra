@@ -217,10 +217,23 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 			ResourceAccountId, _ := fmtTemplate(rule.Metadata.ResourceAccountId, outMap)
 			ResourceId, _ := fmtTemplate(rule.Metadata.ResourceId, outMap)
 			ResourceRegion, _ := fmtTemplate(rule.Metadata.ResourceRegion, outMap)
+			var remediation string
+			var remediationPath string
+			if filepath.IsAbs(rule.Metadata.Remediation) {
+				remediationPath = rule.Metadata.Remediation
+			} else {
+				remediationPath = filepath.Join(*global.WORKSPACE, rule.Metadata.Remediation)
+			}
+			remediationByte, err := os.ReadFile(remediationPath)
+			remediation = string(remediationByte)
+			if err != nil {
+				remediation = err.Error()
+			}
 			outMetaData = append(outMetaData, httpClient.Metadata{
 				Id:                rule.Metadata.Id,
 				Severity:          rule.Metadata.Severity,
 				ResourceType:      rule.Metadata.ResourceType,
+				Remediation:       remediation,
 				Provider:          rule.Metadata.Provider,
 				ResourceAccountId: ResourceAccountId,
 				ResourceId:        ResourceId,
@@ -283,7 +296,8 @@ func RunRulesWithoutModule() *[]config.Rule {
 func RunPathModule(module config.Module) *[]config.Rule {
 	var resRule config.RulesConfig
 	for _, use := range module.Uses {
-		b, err := os.ReadFile(use)
+		usePath := filepath.Join(*global.WORKSPACE, use)
+		b, err := os.ReadFile(usePath)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
@@ -309,9 +323,15 @@ func RunPathModule(module config.Module) *[]config.Rule {
 			ruleConfig.Rules[i].Output = baseRule.Rules[i].Output
 			ruleConfig.Rules[i].Query = baseRule.Rules[i].Query
 			ruleConfig.Rules[i].Path = use
-			if strings.HasPrefix(ruleConfig.Rules[i].Query, ".") {
-				dir := filepath.Dir(use)
-				sqlByte, err := os.ReadFile(filepath.Join(dir, ruleConfig.Rules[i].Query))
+			_, err := os.Stat(filepath.Join(*global.WORKSPACE, ruleConfig.Rules[i].Query))
+			if err == nil {
+				var sqlPath string
+				if filepath.IsAbs(ruleConfig.Rules[i].Query) {
+					sqlPath = ruleConfig.Rules[i].Query
+				} else {
+					sqlPath = filepath.Join(*global.WORKSPACE, ruleConfig.Rules[i].Query)
+				}
+				sqlByte, err := os.ReadFile(sqlPath)
 				if err != nil {
 					ui.PrintErrorF("sql open error:%s", err.Error())
 					return nil

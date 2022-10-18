@@ -145,7 +145,7 @@ func (c *Config) GetDSN() string {
 	var db *DB
 
 	token, err := utils.GetCredentialsToken()
-	if token != "" && err == nil {
+	if token != "" && c.Cloud != nil && err == nil {
 		DSN, err := httpClient.GetDsn(token)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
