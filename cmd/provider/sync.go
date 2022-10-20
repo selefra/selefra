@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"github.com/selefra/selefra/cmd/fetch"
 	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
@@ -12,17 +13,17 @@ import (
 	"path/filepath"
 )
 
-func Sync() error {
+func Sync() (errLogs []string, err error) {
 	ui.PrintSuccessLn("Initializing provider plugins...\n")
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
-	err := cof.GetConfig()
+	err = cof.GetConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	namespace, _, err := utils.Home()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	provider := registry.NewProviderRegistry(namespace)
 	ui.PrintSuccessF("Selefra has been successfully installed providers!\n")
@@ -40,11 +41,18 @@ func Sync() error {
 		if err != nil {
 			hasError = true
 			ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())
+			errLogs = append(errLogs, fmt.Sprintf("%s@%s failed updated：%s", p.Name, p.Version, err.Error()))
 			continue
 		} else {
 			p.Path = pp.Filepath
 			p.Version = pp.Version
-			tools.SetSelefraProvider(pp, nil)
+			err = tools.SetSelefraProvider(pp, nil)
+			if err != nil {
+				hasError = true
+				ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())
+				errLogs = append(errLogs, fmt.Sprintf("%s@%s failed updated：%s", p.Name, p.Version, err.Error()))
+				continue
+			}
 			ProviderRequires = append(ProviderRequires, p)
 			ui.PrintSuccessF("	%s@%s all ready updated!\n", p.Name, p.Version)
 		}
@@ -67,5 +75,5 @@ This may be exception, view detailed exception in %s .
 `, filepath.Join(*global.WORKSPACE, "logs"))
 	}
 
-	return nil
+	return errLogs, nil
 }

@@ -38,8 +38,15 @@ func NewApplyCmd() *cobra.Command {
 func applyFunc(cmd *cobra.Command, args []string) error {
 	global.CMD = "apply"
 	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	*global.WORKSPACE = wd
-	err = config.IsSelefra()
+	return Apply(cmd.Context())
+}
+
+func Apply(ctx context.Context) error {
+	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return err
@@ -70,10 +77,9 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-	ctx := cmd.Context()
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-	err = provider.Sync()
+	_, err = provider.Sync()
 	if err != nil {
 		if token != "" && s.Selefra.Cloud != nil && err == nil {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
@@ -163,7 +169,6 @@ func UploadWorkspace(project string) error {
 }
 
 func RunRules(ctx context.Context, c *client.Client, project string, rules []config.Rule) error {
-
 	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
 		var params = make(map[string]interface{})

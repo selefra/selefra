@@ -77,17 +77,18 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 	return nil
 }
 
-func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.SelefraConfig) {
+func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.SelefraConfig) error {
 	source := utils.CreateSource(provider.Name, provider.Version)
-
 	_, configPath, err := utils.Home()
 	if err != nil {
 		ui.PrintErrorLn("SetSelefraProviderError: " + err.Error())
+		return err
 	}
 	var pathMap = make(map[string]string)
 	file, err := os.ReadFile(configPath)
 	if err != nil {
 		ui.PrintErrorLn("SetSelefraProviderError: " + err.Error())
+		return err
 	}
 	json.Unmarshal(file, &pathMap)
 
@@ -107,5 +108,5 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 			Version: provider.Version,
 		})
 	}
-
+	return nil
 }

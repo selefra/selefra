@@ -14,9 +14,13 @@ func NewVersionCmd() *cobra.Command {
 		Short: "Print Selefra's version number",
 		Long:  "Print Selefra's version number",
 		Run: func(cmd *cobra.Command, args []string) {
-			global.CMD = "version"
-			fmt.Println(Version)
+			version()
 		},
 	}
 	return cmd
+}
+
+func version() {
+	global.CMD = "version"
+	fmt.Println(Version)
 }

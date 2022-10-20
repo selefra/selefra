@@ -33,13 +33,8 @@ func NewTestCmd() *cobra.Command {
 	return cmd
 }
 
-func testFunc(cmd *cobra.Command, args []string) error {
-	global.CMD = "test"
-	ctx := cmd.Context()
-
-	wd, err := os.Getwd()
-	*global.WORKSPACE = wd
-	err = config.IsSelefra()
+func TestFunc(ctx context.Context) error {
+	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return err
@@ -50,6 +45,18 @@ func testFunc(cmd *cobra.Command, args []string) error {
 	}
 	s := config.SelefraConfig{}
 	return CheckSelefraConfig(ctx, s)
+}
+
+func testFunc(cmd *cobra.Command, args []string) error {
+	global.CMD = "test"
+	ctx := cmd.Context()
+	wd, err := os.Getwd()
+	if err != nil {
+		ui.PrintErrorLn("Error:" + err.Error())
+		return nil
+	}
+	*global.WORKSPACE = wd
+	return TestFunc(ctx)
 }
 
 func checkConfig(ctx context.Context, c config.SelefraConfig) error {
