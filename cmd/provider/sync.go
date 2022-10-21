@@ -36,6 +36,7 @@ func Sync() (errLogs []string, err error) {
 			Name:    p.Name,
 			Version: p.Version,
 			Source:  "",
+			Path:    p.Path,
 		}
 		pp, err := provider.Download(ctx, prov, true)
 		if err != nil {

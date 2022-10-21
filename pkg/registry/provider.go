@@ -35,6 +35,7 @@ type Provider struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Source  string `json:"source"`
+	Path    string `json:"path"`
 }
 
 func (p *Provider) String() string {
@@ -231,6 +232,10 @@ func (p *provider) Download(ctx context.Context, provider Provider, skipVerify b
 
 func (p *provider) download(ctx context.Context, provider Provider, skipVerify bool) (ProviderBinary, error) {
 	pp := ProviderBinary{Provider: provider}
+	if provider.Path != "" {
+		pp.Filepath = provider.Path
+		return pp, nil
+	}
 	abs, err := filepath.Abs(p.namespace)
 	if err != nil {
 		return pp, err
