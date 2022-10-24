@@ -45,6 +45,22 @@ func Home() (string, string, error) {
 	return registryPath, config, nil
 }
 
+func GetOCIPath() (string, error) {
+	path, _, err := Home()
+	if err != nil {
+		return "", err
+	}
+	ociPath := filepath.Join(path, "oci")
+	_, err = os.Stat(ociPath)
+	if errors.Is(err, os.ErrNotExist) {
+		err = os.MkdirAll(ociPath, 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+	return ociPath, nil
+}
+
 func GetCredentialsPath() (string, error) {
 	path, _, err := Home()
 	if err != nil {

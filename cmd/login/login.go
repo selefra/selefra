@@ -18,7 +18,6 @@ func NewLoginCmd() *cobra.Command {
 		Long:  "Login to selefra using token",
 		RunE:  RunFunc,
 	}
-
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
 }
@@ -70,7 +69,9 @@ func CliLogin(token string) error {
 
 func Success(orgName, userName, token string) {
 	err := utils.SetCredentials(token)
-	global.LOGINTOKEN = token
+	if global.LOGINTOKEN == "" {
+		global.LOGINTOKEN = token
+	}
 	global.ORGNAME = orgName
 	if err != nil {
 		ui.PrintErrorLn(err.Error())

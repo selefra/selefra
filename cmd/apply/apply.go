@@ -63,7 +63,9 @@ func Apply(ctx context.Context) error {
 			ui.PrintErrorLn("The token is invalid. Please execute selefra to log out or log in again")
 			return nil
 		}
-		global.LOGINTOKEN = token
+		if global.LOGINTOKEN == "" {
+			global.LOGINTOKEN = token
+		}
 		_, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())

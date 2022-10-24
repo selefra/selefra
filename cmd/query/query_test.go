@@ -31,3 +31,27 @@ func TestNewQueryClient(t *testing.T) {
 		t.Error("queryClient is nil")
 	}
 }
+
+func TestNewQueryClientOnline(t *testing.T) {
+	global.SERVER = "dev-api.selefra.io"
+	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
+	*global.WORKSPACE = "../../tests/workspace/online"
+	var cof = &config.SelefraConfig{}
+	err := cof.GetConfig()
+	if err != nil {
+		ui.PrintErrorLn(err)
+		return
+	}
+	uid, _ := uuid.NewUUID()
+	ctx := context.Background()
+	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid)
+	if e != nil {
+		ui.PrintErrorLn(e)
+		return
+	}
+
+	queryClient := NewQueryClient(ctx, c)
+	if queryClient == nil {
+		t.Error("queryClient is nil")
+	}
+}

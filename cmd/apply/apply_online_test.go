@@ -9,8 +9,10 @@ import (
 	"testing"
 )
 
-func TestGetRules(t *testing.T) {
-	*global.WORKSPACE = "../../tests/workspace/offline"
+func TestGetRulesOnline(t *testing.T) {
+	global.SERVER = "dev-api.selefra.io"
+	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
+	*global.WORKSPACE = "../../tests/workspace/online"
 	modules, err := config.GetModulesByPath()
 	if err != nil {
 		t.Error(err)
@@ -42,8 +44,10 @@ func TestGetRules(t *testing.T) {
 	}
 }
 
-func TestApply(t *testing.T) {
-	*global.WORKSPACE = "../../tests/workspace/offline"
+func TestApplyOnLine(t *testing.T) {
+	global.SERVER = "dev-api.selefra.io"
+	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
+	*global.WORKSPACE = "../../tests/workspace/online"
 	err := Apply(context.Background())
 	if err != nil {
 		t.Error(err)

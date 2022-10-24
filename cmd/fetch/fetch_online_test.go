@@ -7,8 +7,10 @@ import (
 	"testing"
 )
 
-func TestFetch(t *testing.T) {
-	*global.WORKSPACE = "../../tests/workspace/offline"
+func TestFetchOnline(t *testing.T) {
+	*global.WORKSPACE = "../../tests/workspace/online"
+	global.SERVER = "dev-api.selefra.io"
+	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
 	err := cof.GetConfig()

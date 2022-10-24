@@ -8,4 +8,4 @@ var ORGNAME = ""
 var CMD = ""
 var STAG = ""
 
-const SERVER = "main-api.selefra.io"
+var SERVER = "dev-api.selefra.io"
