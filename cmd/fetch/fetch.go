@@ -120,9 +120,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
 		return errors.New("fetch provider create table error")
 	}
-
+	var tables []string
+	if len(p.Resources) == 0 {
+		tables = append(tables, "*")
+	} else {
+		for i := range p.Resources {
+			tables = append(tables, p.Resources[i])
+		}
+	}
 	recv, err := provider.PullTables(ctx, &shard.PullTablesRequest{
-		Tables:        []string{"*"},
+		Tables:        tables,
 		MaxGoroutines: 100,
 		Timeout:       0,
 	})

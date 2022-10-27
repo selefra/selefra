@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/selefra/selefra/pkg/httpClient"
+	"github.com/selefra/selefra/pkg/oci"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"github.com/spf13/viper"
@@ -111,10 +112,11 @@ type ConfigInitWithLogin struct {
 }
 
 type ProviderRequired struct {
-	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
-	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
-	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
-	Path    string  `yaml:"path" json:"path"`
+	Name      string   `yaml:"name,omitempty" json:"name,omitempty"`
+	Source    *string  `yaml:"source,omitempty" json:"source,omitempty"`
+	Version   string   `yaml:"version,omitempty" json:"version,omitempty"`
+	Path      string   `yaml:"path" json:"path"`
+	Resources []string `yaml:"resources" json:"resources"`
 }
 
 type ProviderRequiredInit struct {
@@ -156,6 +158,11 @@ func (c *Config) GetDSN() string {
 	}
 	db = c.Connection
 	if db == nil {
+		err := oci.RunDB()
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return ""
+		}
 		db = &DB{
 			Driver:   "",
 			Type:     "postgres",

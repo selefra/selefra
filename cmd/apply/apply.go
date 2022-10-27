@@ -157,7 +157,7 @@ Loading Selefra analysis code ...
 }
 
 func UploadWorkspace(project string) error {
-	fileMap, err := config.GetAllConfig(".", nil)
+	fileMap, err := config.GetAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
 		return err

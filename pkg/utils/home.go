@@ -45,12 +45,12 @@ func Home() (string, string, error) {
 	return registryPath, config, nil
 }
 
-func GetOCIPath() (string, error) {
+func GetTempPath() (string, error) {
 	path, _, err := Home()
 	if err != nil {
 		return "", err
 	}
-	ociPath := filepath.Join(path, "oci")
+	ociPath := filepath.Join(path, "temp")
 	_, err = os.Stat(ociPath)
 	if errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(ociPath, 0755)

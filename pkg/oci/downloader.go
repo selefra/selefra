@@ -1,35 +1,61 @@
 package oci
 
 import (
+	"bytes"
+	"context"
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/containerd/containerd/remotes/docker"
 	"github.com/selefra/selefra/pkg/utils"
-	"path/filepath"
+	"github.com/selefra/selefra/ui"
+	"oras.land/oras-go/pkg/content"
+	"oras.land/oras-go/pkg/oras"
+	"os"
+	"os/exec"
 )
 
-func DownloadDB() {
-	ociPath, err := utils.GetOCIPath()
-	if err != nil {
-		return
+func check(e error) {
+	if e != nil {
+		panic(e)
 	}
-	image, err := crane.Pull("docker.io/library/postgres:latest")
-	fmt.Println(image.Size())
-	if err != nil {
-		return
+}
+
+func RunDB() error {
+	ui.PrintInfoLn("Running DB ...")
+	ref := "localhost:5001/postgre:latest"
+	ctx := context.Background()
+	resolver := docker.NewResolver(docker.ResolverOptions{})
+	tempDir, _ := utils.GetTempPath()
+	_ = os.MkdirAll(tempDir, 0755)
+	fileStore := content.NewFile(tempDir)
+	_, err := os.Stat(tempDir + "/pgsql")
+	dataPath := tempDir + "/pgsql/data"
+	ctlPath := tempDir + "/pgsql/bin/pg_ctl"
+	initPath := tempDir + "/pgsql/bin/initdb"
+	if os.IsNotExist(err) {
+		_, err := oras.Copy(ctx, resolver, ref, fileStore, tempDir)
+		check(err)
+		cmd := exec.Command(initPath, "-D", dataPath, "-U", "postgres")
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		if err != nil {
+			return fmt.Errorf(err.Error() + ": " + stderr.String())
+		}
 	}
-	err = crane.SaveOCI(image, filepath.Join(ociPath, "postgres"))
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := exec.Command(ctlPath, "-D", dataPath, "stop")
+	_ = cmd.Run()
+
+	cmd = exec.Command(ctlPath, "-D", dataPath, "-l", tempDir+"/pgsql/logfile", "start")
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
 	if err != nil {
-		return
+		return fmt.Errorf(err.Error() + ": " + stderr.String())
 	}
-	err = crane.SaveLegacy(image, "docker.io/library/postgres:latest", filepath.Join(ociPath, "postgres.tar"))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	img, err := crane.Load(filepath.Join(ociPath, "postgres.tar"))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(img.Size())
+	ui.PrintErrorLn("Running DB Success")
+	return nil
 }
