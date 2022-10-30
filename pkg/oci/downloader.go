@@ -13,6 +13,7 @@ import (
 	"oras.land/oras-go/pkg/oras"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -23,8 +24,9 @@ func check(e error) {
 }
 
 func RunDB() error {
+	const goos = runtime.GOOS
 	ui.PrintInfoLn("Running DB ...")
-	ref := "localhost:5001/postgre:latest"
+	ref := "localhost:5001/postgre_" + goos + ":latest"
 	ctx := context.Background()
 	resolver := docker.NewResolver(docker.ResolverOptions{})
 	tempDir, _ := utils.GetTempPath()
@@ -35,6 +37,12 @@ func RunDB() error {
 	ctlPath := tempDir + "/pgsql/bin/pg_ctl"
 	initPath := tempDir + "/pgsql/bin/initdb"
 	confPath := tempDir + "/pgsql/data/postgresql.conf"
+
+	if goos == "windows" {
+		ctlPath = tempDir + "/pgsql/bin/pg_ctl.exe"
+		initPath = tempDir + "/pgsql/bin/initdb.exe"
+	}
+
 	if os.IsNotExist(err) {
 		_, err := oras.Copy(ctx, resolver, ref, fileStore, tempDir)
 		check(err)

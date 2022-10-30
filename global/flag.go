@@ -8,4 +8,4 @@ var ORGNAME = ""
 var CMD = ""
 var STAG = ""
 
-var SERVER = "main-api.selefra.io"
+var SERVER = "home.shubo6.cn:58008"
