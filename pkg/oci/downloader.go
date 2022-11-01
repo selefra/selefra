@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/containerd/containerd/remotes/docker"
+	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"io"
@@ -15,29 +16,35 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
+func loadBar(doneFlag *bool) {
+	go func() {
+		dotLen := 0
+		for *doneFlag {
+			time.Sleep(1 * time.Second)
+			dotLen++
+			ui.PrintCustomizeFNotN(ui.InfoColor, "\rWaiting for DB to download %s", strings.Repeat(".", dotLen%6)+strings.Repeat(" ", 6-dotLen%6))
+		}
+	}()
 }
 
 func RunDB() error {
 	const goos = runtime.GOOS
-	ui.PrintInfoLn("Running DB ...")
-	ref := "localhost:5001/postgre_" + goos + ":latest"
+	doneFlag := true
+	loadBar(&doneFlag)
+	ref := global.PkgBasePath + goos + global.PkgTag
 	ctx := context.Background()
 	resolver := docker.NewResolver(docker.ResolverOptions{})
 	tempDir, _ := utils.GetTempPath()
 	_ = os.MkdirAll(tempDir, 0755)
 	fileStore := content.NewFile(tempDir)
-	_, err := os.Stat(tempDir + "/pgsql")
+	_, err := os.Stat(tempDir + "/pgsql/bin")
 	dataPath := tempDir + "/pgsql/data"
 	ctlPath := tempDir + "/pgsql/bin/pg_ctl"
 	initPath := tempDir + "/pgsql/bin/initdb"
 	confPath := tempDir + "/pgsql/data/postgresql.conf"
-
 	if goos == "windows" {
 		ctlPath = tempDir + "/pgsql/bin/pg_ctl.exe"
 		initPath = tempDir + "/pgsql/bin/initdb.exe"
@@ -45,7 +52,10 @@ func RunDB() error {
 
 	if os.IsNotExist(err) {
 		_, err := oras.Copy(ctx, resolver, ref, fileStore, tempDir)
-		check(err)
+		doneFlag = false
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
 		cmd := exec.Command(initPath, "-D", dataPath, "-U", "postgres")
 		var out bytes.Buffer
 		var stderr bytes.Buffer
@@ -55,7 +65,10 @@ func RunDB() error {
 		if err != nil {
 			return fmt.Errorf(err.Error() + ": " + stderr.String())
 		}
-		ChangePort(confPath, "15432")
+		err = ChangePort(confPath, "15432")
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
 	}
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -81,14 +94,6 @@ func ChangePort(filePath, port string) error {
 	}
 	//defer关闭文件
 	defer file.Close()
-
-	//获取文件大小
-	stat, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("open file filed:%s", err)
-	}
-	var size = stat.Size()
-	fmt.Println("file size:", size)
 
 	//读取文件内容到io中
 	reader := bufio.NewReader(file)

@@ -169,7 +169,7 @@ func (c *Config) GetDSN() string {
 			Username: "postgres",
 			Password: "pass",
 			Host:     "localhost",
-			Port:     "5432",
+			Port:     "15432",
 			Database: "postgres",
 			SSLMode:  "disable",
 			Extras:   nil,
@@ -639,6 +639,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			providersMap["source"] = nil
 			providersMap["version"] = nil
 			providersMap["path"] = new(yaml.Node)
+			providersMap["resources"] = new(yaml.Node)
 			yamlPath := fmt.Sprintf("selefra.providers[%d]:", index)
 			err = checkNode(providersMap, node.Content, pathStr, yamlPath)
 			if err != nil {

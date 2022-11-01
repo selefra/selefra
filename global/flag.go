@@ -8,4 +8,7 @@ var ORGNAME = ""
 var CMD = ""
 var STAG = ""
 
-var SERVER = "home.shubo6.cn:58008"
+const PkgBasePath = "ghcr.io/selefra/postgre_"
+const PkgTag = ":latest"
+
+var SERVER = "main-api.selefra.io"
