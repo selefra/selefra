@@ -24,8 +24,10 @@ func loadBar(doneFlag *bool) {
 		dotLen := 0
 		for *doneFlag {
 			time.Sleep(1 * time.Second)
-			dotLen++
-			ui.PrintCustomizeFNotN(ui.InfoColor, "\rWaiting for DB to download %s", strings.Repeat(".", dotLen%6)+strings.Repeat(" ", 6-dotLen%6))
+			if *doneFlag {
+				dotLen++
+				ui.PrintCustomizeFNotN(ui.InfoColor, "\rWaiting for DB to download %s", strings.Repeat(".", dotLen%6)+strings.Repeat(" ", 6-dotLen%6))
+			}
 		}
 	}()
 }
@@ -52,7 +54,6 @@ func RunDB() error {
 
 	if os.IsNotExist(err) {
 		_, err := oras.Copy(ctx, resolver, ref, fileStore, tempDir)
-		doneFlag = false
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
@@ -82,7 +83,8 @@ func RunDB() error {
 	if err != nil {
 		return fmt.Errorf(err.Error() + ": " + stderr.String())
 	}
-	ui.PrintErrorLn("Running DB Success")
+	doneFlag = false
+	ui.PrintSuccessLn("Running DB Success")
 	return nil
 }
 
