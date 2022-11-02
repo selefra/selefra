@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/google/uuid"
-	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
@@ -17,6 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -81,7 +81,7 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-	_, err = provider.Sync()
+	//_, err = provider.Sync()
 	if err != nil {
 		if token != "" && s.Selefra.Cloud != nil && err == nil {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
@@ -303,7 +303,12 @@ func RunRulesWithoutModule() *[]config.Rule {
 func RunPathModule(module config.Module) *[]config.Rule {
 	var resRule config.RulesConfig
 	for _, use := range module.Uses {
-		usePath := filepath.Join(*global.WORKSPACE, use)
+		var usePath string
+		if path.IsAbs(use) {
+			usePath = use
+		} else {
+			usePath = filepath.Join(*global.WORKSPACE, use)
+		}
 		b, err := os.ReadFile(usePath)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())

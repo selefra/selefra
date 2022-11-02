@@ -4,8 +4,8 @@ selefra:
     cli_version: '{{version}}'
     providers:
         - name: aws
-          source: selefra/aws@v0.0.4
-          version: v0.0.4
+          source: selefra/aws@v0.0.5
+          version: v0.0.5
 providers:
     - name: aws
       ##  Optional, Repeated. Add an accounts block for every account you want to assume-role into and fetch data from.

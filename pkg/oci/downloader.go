@@ -70,6 +70,7 @@ func RunDB() error {
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
+		ui.PrintSuccessLn("Running DB Success")
 	}
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -84,7 +85,6 @@ func RunDB() error {
 		return fmt.Errorf(err.Error() + ": " + stderr.String())
 	}
 	doneFlag = false
-	ui.PrintSuccessLn("Running DB Success")
 	return nil
 }
 
