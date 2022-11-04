@@ -302,18 +302,30 @@ func RunRulesWithoutModule() *[]config.Rule {
 
 func RunPathModule(module config.Module) *[]config.Rule {
 	var resRule config.RulesConfig
+	var b []byte
+	var err error
 	for _, use := range module.Uses {
 		var usePath string
-		if path.IsAbs(use) {
+		if path.IsAbs(use) || strings.Index(use, "://") > -1 {
 			usePath = use
 		} else {
 			usePath = filepath.Join(*global.WORKSPACE, use)
 		}
-		b, err := os.ReadFile(usePath)
-		if err != nil {
-			ui.PrintErrorLn(err.Error())
-			return nil
+		if strings.Index(usePath, "://") > -1 {
+			d := config.Downloader{Url: usePath}
+			b, err = d.Get()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return nil
+			}
+		} else {
+			b, err = os.ReadFile(usePath)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return nil
+			}
 		}
+
 		var baseRule config.RulesConfig
 		err = yaml.Unmarshal(b, &baseRule)
 		if err != nil {

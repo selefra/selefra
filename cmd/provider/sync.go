@@ -32,6 +32,7 @@ func Sync() (errLogs []string, err error) {
 	var hasError bool
 	var ProviderRequires []*config.ProviderRequired
 	for _, p := range cof.Selefra.Providers {
+		configVersion := p.Version
 		prov := registry.Provider{
 			Name:    p.Name,
 			Version: p.Version,
@@ -47,7 +48,7 @@ func Sync() (errLogs []string, err error) {
 		} else {
 			p.Path = pp.Filepath
 			p.Version = pp.Version
-			err = tools.SetSelefraProvider(pp, nil)
+			err = tools.SetSelefraProvider(pp, nil, configVersion)
 			if err != nil {
 				hasError = true
 				ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())

@@ -168,7 +168,7 @@ func CreateYaml(cmd *cobra.Command) (*config.SelefraConfig, error) {
 			return &configYaml, fmt.Errorf("	Synchronization %s@%s's config failed：%s", p.Name, p.Version, err.Error())
 		}
 		ui.PrintSuccessF("	Synchronization %s@%s's config successful", p.Name, p.Version)
-		err = tools.SetSelefraProvider(p, &configYaml)
+		err = tools.SetSelefraProvider(p, &configYaml, "latest")
 		if err != nil {
 			return &configYaml, err
 		}

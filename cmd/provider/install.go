@@ -138,7 +138,7 @@ func install(ctx context.Context, args []string) error {
 			return nil
 		}
 		ui.PrintSuccessF("Synchronization %s@%s's config successful", p.Name, p.Version)
-		err = tools.SetSelefraProvider(p, &configYaml)
+		err = tools.SetSelefraProvider(p, &configYaml, version)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil

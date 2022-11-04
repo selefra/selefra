@@ -114,7 +114,6 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 		opt, err := json.Marshal(storage)
 
 		provider := plug.Provider()
-
 		initRes, err := provider.Init(ctx, &shard.ProviderInitRequest{
 			Workspace: global.WORKSPACE,
 			Storage: &shard.Storage{

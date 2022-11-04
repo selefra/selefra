@@ -137,8 +137,11 @@ func GetCredentialsToken() (string, error) {
 	return jsonmap["token"], nil
 }
 
-func CreateSource(path, version string) string {
-	return "selefra/" + path + "@" + version
+func CreateSource(path, version, latest string) (string, string) {
+	if latest == "latest" {
+		return "selefra/" + path + "@" + version, "selefra/" + path + "@latest"
+	}
+	return "selefra/" + path + "@" + version, ""
 }
 
 func GetNameBySource(source string) string {
