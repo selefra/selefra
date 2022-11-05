@@ -48,10 +48,20 @@ func Home() (string, string, error) {
 	return registryPath, config, nil
 }
 
-func GetHomeModulesPath() (string, error) {
+func GetHomeModulesPath(modules string) (string, error) {
 	path, _, err := Home()
+	if err != nil {
+		return "", err
+	}
 	modulesPath := filepath.Join(path, "download/modules")
+	err = ModulesUpdate(modules, modulesPath)
+	if err != nil {
+		return "", err
+	}
 	_, err = os.Stat(modulesPath)
+	if err != nil {
+		return "", err
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(modulesPath, 0755)
 		if err != nil {
@@ -210,7 +220,7 @@ func getModulesModulesSupplement(ctx context.Context, modulesName, version strin
 	return supplement, err
 }
 
-func ModulesUpdate(modulesName string) error {
+func ModulesUpdate(modulesName string, modulesPath string) error {
 	_, config, err := Home()
 	if err != nil {
 		return err
@@ -232,10 +242,6 @@ func ModulesUpdate(modulesName string) error {
 		return nil
 	} else {
 		supplement, err := getModulesModulesSupplement(context.Background(), modulesName, metadata.LatestVersion)
-		if err != nil {
-			return err
-		}
-		modulesPath, err := GetHomeModulesPath()
 		if err != nil {
 			return err
 		}

@@ -277,78 +277,44 @@ func readConfigFile(dirname string, configMap ConfigMap, file os.FileInfo) (Conf
 					configMap[node.Content[0].Content[i].Value] = make(map[string]string)
 				}
 				configMap[node.Content[0].Content[i].Value][filepath.Join(dirname, file.Name())] = string(b)
-				if node.Content[0].Content[i].Value == "modules" {
-					ModulesCount := node.Content[0].Content[i+1].Content[0].Content
-					for i, node := range ModulesCount {
-						if node.Value == "uses" {
-							for _, use := range ModulesCount[i+1].Content {
-								var p string
-								if filepath.IsAbs(use.Value) {
-									p = use.Value
-								}
-								var ruleb []byte
-								if strings.Index(p, "://") == -1 {
-									ruleb, err = os.ReadFile(p)
-									if err != nil {
-										return nil, fmt.Errorf("check filePath:%s", err.Error())
-									}
-								} else {
-									d := Downloader{Url: p}
-									ruleb, err = d.Get()
-								}
-								if err != nil {
-									return nil, fmt.Errorf("check filePath:%s", err.Error())
-								}
-								if configMap[RULES] == nil {
-									configMap[RULES] = make(map[string]string)
-								}
-								if strings.Index(string(ruleb), "modules:") < 0 {
-									configMap[RULES][p] = string(ruleb)
-								}
-							}
-						}
-					}
-				}
+				//if node.Content[0].Content[i].Value == "modules" {
+				//	ModulesCount := node.Content[0].Content[i+1].Content[0].Content
+				//	for i, node := range ModulesCount {
+				//		if node.Value == "uses" {
+				//			for _, use := range ModulesCount[i+1].Content {
+				//				var p string
+				//				if filepath.IsAbs(use.Value) {
+				//					p = use.Value
+				//				}
+				//				var ruleb []byte
+				//				if strings.Index(p, "://") == -1 {
+				//					ruleb, err = os.ReadFile(p)
+				//					if err != nil {
+				//						return nil, fmt.Errorf("check filePath:%s", err.Error())
+				//					}
+				//				} else {
+				//					d := Downloader{Url: p}
+				//					ruleb, err = d.Get()
+				//				}
+				//				if err != nil {
+				//					return nil, fmt.Errorf("check filePath:%s", err.Error())
+				//				}
+				//				if configMap[RULES] == nil {
+				//					configMap[RULES] = make(map[string]string)
+				//				}
+				//				if strings.Index(string(ruleb), "modules:") < 0 {
+				//					configMap[RULES][p] = string(ruleb)
+				//				}
+				//			}
+				//		}
+				//	}
+				//}
 			}
 		}
 	}
 	return configMap, nil
 }
 
-func readSelefraConfig(dirname string, configMap ConfigMap) (ConfigMap, error) {
-	if configMap == nil || len(configMap) == 0 {
-		configMap = make(ConfigMap)
-	}
-
-	file, err := os.Stat(dirname)
-	if err != nil {
-		return nil, err
-	}
-	if !file.IsDir() {
-		_, err = readConfigFile(dirname, configMap, file)
-		if err != nil {
-			return nil, err
-		}
-		return configMap, nil
-	}
-
-	files, err := os.ReadDir(dirname)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		if !file.IsDir() {
-			if path.Ext(file.Name()) == ".yaml" {
-				f, _ := file.Info()
-				_, err = readConfigFile(dirname, configMap, f)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	return configMap, nil
-}
 func assembleNode(configMap map[string]string) (*yaml.Node, map[string]*yaml.Node, error) {
 	var baseNode *yaml.Node
 	var nodeMap = make(map[string]*yaml.Node)
@@ -440,7 +406,9 @@ func GetModulesStr() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	for s := range configMap[MODULES] {
+		getAllModules(configMap[MODULES], s)
+	}
 	_, moduleMap, err := assembleNode(configMap[MODULES])
 	err = deepPathModules(moduleMap)
 	cyclePathMap, err := makeCyclePathMap(moduleMap)
@@ -454,8 +422,80 @@ func GetModulesStr() ([]byte, error) {
 			return nil, errors.New("Modules have circular references:" + cyclePathStr)
 		}
 	}
-
 	return makeUsesModule(moduleMap)
+}
+
+func checkModuleFile(configMap map[string]string, waitUsePath string, file os.FileInfo) error {
+	var b []byte
+	var err error
+	if strings.HasSuffix(waitUsePath, "yaml") {
+		b, err = os.ReadFile(waitUsePath)
+	} else if strings.HasSuffix(file.Name(), ".yaml") {
+		b, err = os.ReadFile(filepath.Join(waitUsePath, file.Name()))
+	} else {
+		err = fmt.Errorf("the file name is not yaml:%s", waitUsePath)
+	}
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
+	if strings.Index(string(b), "modules:") > -1 {
+		configMap[filepath.Join(waitUsePath, file.Name())] = string(b)
+		var module ModuleConfig
+		err = yaml.Unmarshal(b, &module)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return err
+		}
+		for _, module := range module.Modules {
+			for i := range module.Uses {
+				getAllModules(configMap, module.Uses[i])
+			}
+		}
+	}
+	return nil
+}
+
+func getAllModules(configMap map[string]string, path string) {
+	waitUsePath := path
+	if strings.HasPrefix(waitUsePath, "selefra/") {
+		modulesName := strings.Split(waitUsePath, "/")[1]
+		modulePath, err := utils.GetHomeModulesPath(modulesName)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+		}
+		waitUsePath = strings.Replace(waitUsePath, "selefra", modulePath, 1)
+	}
+	file, err := os.Stat(waitUsePath)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return
+	}
+	if file.IsDir() {
+		files, err := os.ReadDir(waitUsePath)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return
+		}
+		for _, file := range files {
+			f, err := file.Info()
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+			err = checkModuleFile(configMap, waitUsePath, f)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+		}
+	} else {
+		err = checkModuleFile(configMap, waitUsePath, file)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return
+		}
+	}
 }
 
 func deepCopyYamlContent(node *yaml.Node) *yaml.Node {
@@ -511,7 +551,6 @@ func deepPathModules(moduleMap map[string]*yaml.Node) error {
 				if !strings.HasSuffix(fileName, ".yaml") {
 					return errors.New("Module file does not yaml:" + uses)
 				}
-
 			}
 		}
 	}
@@ -538,7 +577,8 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 		for i := range moduleConfig.Modules {
 			for ii, use := range moduleConfig.Modules[i].Uses {
 				if strings.HasPrefix(use, "selefra") {
-					modules, err := utils.GetHomeModulesPath()
+					modulesName := strings.Split(use, "/")[1]
+					modules, err := utils.GetHomeModulesPath(modulesName)
 					if err != nil {
 						return nil, err
 					}
@@ -667,16 +707,6 @@ func GetRules() (RulesConfig, error) {
 	if err != nil {
 		return rules, err
 	}
-
-	modulesPath, err := utils.GetHomeModulesPath()
-	if err != nil {
-		return rules, err
-	}
-	configMap, err = readSelefraConfig(modulesPath, configMap)
-	if err != nil {
-		return rules, err
-	}
-
 	for rulePath, rule := range configMap[RULES] {
 		var baseRule RulesConfig
 		ws := strings.ReplaceAll(rulePath, *global.WORKSPACE+"/", "")
@@ -700,15 +730,6 @@ func (c *SelefraConfig) TestConfigByNode() error {
 	if err != nil {
 		return err
 	}
-	modulesPath, err := utils.GetHomeModulesPath()
-	if err != nil {
-		return err
-	}
-	configMap, err = readSelefraConfig(modulesPath, configMap)
-	if err != nil {
-		return err
-	}
-
 	clientMap := configMap[SELEFRA]
 
 	for pathStr, configStr := range clientMap {
