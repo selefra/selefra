@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -19,9 +18,11 @@ type Downloader struct {
 
 func (d *Downloader) Get() ([]byte, error) {
 	var ruleb []byte
-	urlArr := strings.Split(d.Url, "://")
-	protocol := strings.ToLower(urlArr[0])
-	switch protocol {
+	u, err := url.Parse(d.Url)
+	if err != nil {
+		return nil, fmt.Errorf("download error:%s", err.Error())
+	}
+	switch u.Scheme {
 	case "http", "https":
 		resp, err := http.Get(d.Url)
 		if err != nil {
@@ -33,10 +34,6 @@ func (d *Downloader) Get() ([]byte, error) {
 			return nil, fmt.Errorf("download error:%s", err.Error())
 		}
 	case "s3":
-		u, err := url.Parse(d.Url)
-		if err != nil {
-			return nil, fmt.Errorf("download error:%s", err.Error())
-		}
 		query := u.Query()
 		sess := session.Must(session.NewSession(&aws.Config{
 			Region: aws.String(query.Get("region")),
