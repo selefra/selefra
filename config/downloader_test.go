@@ -6,7 +6,7 @@ import (
 )
 
 func TestDownloader_Get(t *testing.T) {
-	d := Downloader{Url: "s3://static-picture/job3.yaml"}
+	d := Downloader{Url: "s3://static-picture/job3.yaml?region=us-east-1"}
 	b, err := d.Get()
 	if err != nil {
 		t.Error(err)

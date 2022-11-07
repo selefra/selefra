@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -33,15 +33,20 @@ func (d *Downloader) Get() ([]byte, error) {
 			return nil, fmt.Errorf("download error:%s", err.Error())
 		}
 	case "s3":
+		u, err := url.Parse(d.Url)
+		if err != nil {
+			return nil, fmt.Errorf("download error:%s", err.Error())
+		}
+		query := u.Query()
 		sess := session.Must(session.NewSession(&aws.Config{
-			Region: aws.String(endpoints.UsEast1RegionID),
+			Region: aws.String(query.Get("region")),
 		}))
 		service := s3.New(sess)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
 		defer cancel()
-		bucket := strings.Split(urlArr[1], "/")[0]
-		key := strings.Join(strings.Split(urlArr[1], "/")[1:], "/")
+		bucket := u.Host
+		key := u.Path
 		out, err := service.GetObjectWithContext(ctx, &s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(key),
