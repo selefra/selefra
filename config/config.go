@@ -353,8 +353,10 @@ func fmtNodePath(nodes []*yaml.Node, path string, key string) {
 	for i := range nodes {
 		for ii := range nodes[i].Content {
 			if nodes[i].Content[ii].Value == key {
-				if strings.HasPrefix(nodes[i].Content[ii+1].Value, ".") {
-					nodes[i].Content[ii+1].Value = filepath.Join(filepath.Dir(path), nodes[i].Content[ii+1].Value)
+				for iii := range nodes[i].Content[ii+1].Content {
+					if strings.HasPrefix(nodes[i].Content[ii+1].Content[iii].Value, ".") {
+						nodes[i].Content[ii+1].Value = filepath.Join(filepath.Dir(path), nodes[i].Content[ii+1].Value)
+					}
 				}
 			}
 		}
@@ -407,7 +409,7 @@ func GetModulesStr() ([]byte, error) {
 		return nil, err
 	}
 	for s := range configMap[MODULES] {
-		getAllModules(configMap[MODULES], s)
+		getAllModules(configMap[MODULES], "", s)
 	}
 	_, moduleMap, err := assembleNode(configMap[MODULES])
 	err = deepPathModules(moduleMap)
@@ -425,13 +427,14 @@ func GetModulesStr() ([]byte, error) {
 	return makeUsesModule(moduleMap)
 }
 
-func checkModuleFile(configMap map[string]string, waitUsePath string, file os.FileInfo) error {
+func checkModuleFile(configMap map[string]string, workspace string, waitUsePath string, file os.FileInfo) error {
 	var b []byte
 	var err error
-	if strings.HasSuffix(waitUsePath, "yaml") {
+	if strings.HasSuffix(waitUsePath, ".yaml") {
 		b, err = os.ReadFile(waitUsePath)
 	} else if strings.HasSuffix(file.Name(), ".yaml") {
-		b, err = os.ReadFile(filepath.Join(waitUsePath, file.Name()))
+		waitUsePath = filepath.Join(waitUsePath, file.Name())
+		b, err = os.ReadFile(waitUsePath)
 	} else {
 		err = fmt.Errorf("the file name is not yaml:%s", waitUsePath)
 	}
@@ -440,7 +443,7 @@ func checkModuleFile(configMap map[string]string, waitUsePath string, file os.Fi
 		return err
 	}
 	if strings.Index(string(b), "modules:") > -1 {
-		configMap[filepath.Join(waitUsePath, file.Name())] = string(b)
+		configMap[waitUsePath] = string(b)
 		var module ModuleConfig
 		err = yaml.Unmarshal(b, &module)
 		if err != nil {
@@ -449,22 +452,30 @@ func checkModuleFile(configMap map[string]string, waitUsePath string, file os.Fi
 		}
 		for _, module := range module.Modules {
 			for i := range module.Uses {
-				getAllModules(configMap, module.Uses[i])
+				getAllModules(configMap, workspace, module.Uses[i])
 			}
 		}
 	}
 	return nil
 }
 
-func getAllModules(configMap map[string]string, path string) {
-	waitUsePath := path
-	if strings.HasPrefix(waitUsePath, "selefra/") {
-		modulesName := strings.Split(waitUsePath, "/")[1]
+func getAllModules(configMap map[string]string, workspace, path string) {
+	var waitUsePath string
+	if strings.HasPrefix(path, "selefra/") {
+		modulesName := strings.Split(path, "/")[1]
 		modulePath, err := utils.GetHomeModulesPath(modulesName)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 		}
-		waitUsePath = strings.Replace(waitUsePath, "selefra", modulePath, 1)
+		waitUsePath = strings.Replace(path, "selefra", modulePath, 1)
+		workspace = modulePath + "/" + modulesName
+	} else if strings.Index(path, "://") > -1 {
+		waitUsePath = path
+	} else {
+		waitUsePath = filepath.Join(workspace, path)
+		if workspace == "" {
+			workspace = *global.WORKSPACE
+		}
 	}
 	file, err := os.Stat(waitUsePath)
 	if err != nil {
@@ -483,14 +494,14 @@ func getAllModules(configMap map[string]string, path string) {
 				ui.PrintErrorLn(err.Error())
 				continue
 			}
-			err = checkModuleFile(configMap, waitUsePath, f)
+			err = checkModuleFile(configMap, workspace, waitUsePath, f)
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
 				continue
 			}
 		}
 	} else {
-		err = checkModuleFile(configMap, waitUsePath, file)
+		err = checkModuleFile(configMap, workspace, waitUsePath, file)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return
