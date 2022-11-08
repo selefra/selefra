@@ -1,9 +1,8 @@
-name: assets
+name: release
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [ created, edited ]
 jobs:
   goreleaser:
     name: Build
@@ -23,8 +22,7 @@ jobs:
           go-version: 1.18
 
       - name: git
-        run: git config --global url.https://${{ secrets.selefra_TOKEN }}@github.com/.insteadOf https://github.com/
-
+        run: git config --global url.https://${{ secrets.SELEFRA_TOKEN }}@github.com/.insteadOf https://github.com/
 
       - name: Get the release version
         id: get_version
@@ -34,9 +32,30 @@ jobs:
           sed -i "s#{{version}}#${{ steps.get_version.outputs.VERSION }}#g" cmd/version/version.go 
           cat cmd/version/version.go
       - name: Run GoReleaser
+        if: "github.event.release.prerelease"
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          version: latest
+          args: release --skip-publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.SELEFRA_TOKEN }}
+
+      - name: Release
+        if: "github.event.release.prerelease"
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*checksums.txt
+            dist/*.tar.gz
+          prerelease: true
+          generate_release_notes: true
+          token: ${{ secrets.SELEFRA_TOKEN }}
+
+      - name: Run GoReleaser
+        if: "!github.event.release.prerelease"
         uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: release --rm-dist --skip-validate
         env:
-          GITHUB_TOKEN: ${{ secrets.selefra_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SELEFRA_TOKEN }}
