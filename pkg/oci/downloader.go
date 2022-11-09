@@ -34,8 +34,9 @@ func loadBar(doneFlag *bool) {
 
 func RunDB() error {
 	const goos = runtime.GOOS
-	doneFlag := true
-	loadBar(&doneFlag)
+	//doneFlag := true
+	ui.PrintCustomizeFNotN(ui.InfoColor, "\rWaiting for DB to download %s", "......")
+	//loadBar(&doneFlag)
 	ref := global.PkgBasePath + goos + global.PkgTag
 	ctx := context.Background()
 	resolver := docker.NewResolver(docker.ResolverOptions{})
@@ -84,7 +85,7 @@ func RunDB() error {
 	if err != nil {
 		return fmt.Errorf(err.Error() + ": " + stderr.String())
 	}
-	doneFlag = false
+	//doneFlag = false
 	return nil
 }
 
@@ -106,7 +107,6 @@ func ChangePort(filePath, port string) error {
 		if err != nil {
 			//读到末尾
 			if err == io.EOF {
-				fmt.Println("File read ok!")
 				break
 			} else {
 				return fmt.Errorf("read file filed:%s", err.Error())
