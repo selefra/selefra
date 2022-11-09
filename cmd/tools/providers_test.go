@@ -91,7 +91,7 @@ func TestSetSelefraProvider(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = SetSelefraProvider(p, cof)
+	err = SetSelefraProvider(p, cof, "latest")
 	if err != nil {
 		t.Error(err)
 	}

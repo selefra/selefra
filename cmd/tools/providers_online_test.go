@@ -53,6 +53,10 @@ func TestGetProvidersOnline(t *testing.T) {
 }
 
 func TestSetProvidersOnline(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+		return
+	}
 	p, cof, err := getProviderAndConfigOnline()
 	s := `
       ##  Optional, Repeated. Add an accounts block for every account you want to assume-role into and fetch data from.
@@ -91,11 +95,15 @@ func TestSetProvidersOnline(t *testing.T) {
 }
 
 func TestSetSelefraProviderOnLine(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+		return
+	}
 	p, cof, err := getProviderAndConfigOnline()
 	if err != nil {
 		t.Error(err)
 	}
-	err = SetSelefraProvider(p, cof)
+	err = SetSelefraProvider(p, cof, "latest")
 	if err != nil {
 		t.Error(err)
 	}
