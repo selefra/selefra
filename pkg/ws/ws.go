@@ -42,7 +42,7 @@ func (c connClient) Close() error {
 	return c.conn.Close()
 }
 
-func init() {
+func Init() {
 	di := websocket.Dialer{}
 	conn, _, err := di.Dial("ws://"+global.SERVER+"/cli/ws/log_stream", nil)
 	if err != nil {

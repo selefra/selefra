@@ -408,8 +408,12 @@ func GetModulesStr() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	for s := range configMap[MODULES] {
-		getAllModules(configMap[MODULES], "", s)
+	var paths []string
+	for k := range configMap[MODULES] {
+		paths = append(paths, k)
+	}
+	for i := range paths {
+		getAllModules(configMap[MODULES], "", paths[i])
 	}
 	_, moduleMap, err := assembleNode(configMap[MODULES])
 	err = deepPathModules(moduleMap)
@@ -470,7 +474,7 @@ func getAllModules(configMap map[string]string, workspace, path string) {
 		waitUsePath = strings.Replace(path, "selefra", modulePath, 1)
 		workspace = modulePath + "/" + modulesName
 	} else if strings.Index(path, "://") > -1 {
-		waitUsePath = path
+		return
 	} else {
 		waitUsePath = filepath.Join(workspace, path)
 		if workspace == "" {

@@ -47,6 +47,7 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 }
 
 func Apply(ctx context.Context) error {
+	ws.Init()
 	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
@@ -210,6 +211,7 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 		rows := table.GetMatrix()
 		ui.PrintSuccessLn("Output")
 		var outMetaData []httpClient.Metadata
+		var baseRow = make(map[string]interface{})
 		for _, row := range rows {
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
@@ -217,6 +219,7 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				key := column[index]
 				outMap[key] = value
 			}
+			baseRow = outMap
 			out, err := fmtTemplate(outPut, outMap)
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
@@ -253,12 +256,26 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 			ui.PrintSuccessLn("	" + out)
 		}
 
-		if global.LOGINTOKEN != "" {
+		var outLabel = make(map[string]interface{})
+		for key := range rule.Labels {
+			switch rule.Labels[key].(type) {
+			case string:
+				outLabel[key], _ = fmtTemplate(rule.Labels[key].(string), baseRow)
+			case []string:
+				var out []string
+				for _, v := range rule.Labels[key].([]string) {
+					s, _ := fmtTemplate(v, baseRow)
+					out = append(out, s)
+				}
+				outLabel[key] = out
+			}
+		}
 
+		if global.LOGINTOKEN != "" {
 			var req httpClient.OutputReq
 			req.Name = rule.Name
 			req.Query = rule.Query
-			req.Labels = rule.Labels
+			req.Labels = outLabel
 			req.Metadata = outMetaData
 			outputReq = append(outputReq, req)
 		}

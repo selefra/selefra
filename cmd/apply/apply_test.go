@@ -32,12 +32,13 @@ func TestGetRules(t *testing.T) {
 	ctx := context.Background()
 	uid, _ := uuid.NewUUID()
 	s := config.SelefraConfig{}
+
 	err = s.GetConfig()
 	c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid)
 	if err != nil {
 		t.Error(e)
 	}
-	err = RunRules(ctx, c, "", useRules)
+	err = RunRules(ctx, c, s.Selefra.Cloud.Project, useRules)
 	if err != nil {
 		t.Error(err)
 	}

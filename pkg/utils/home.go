@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/mitchellh/go-homedir"
+	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/modules"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -144,7 +145,11 @@ func GetCredentialsToken() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return jsonmap["token"], nil
+	token := jsonmap["token"]
+	if token == "" {
+		token = global.LOGINTOKEN
+	}
+	return token, nil
 }
 
 func CreateSource(path, version, latest string) (string, string) {
@@ -180,7 +185,7 @@ func GetPathBySource(source string) string {
 	return configMap[source]
 }
 
-const ROW = "https://raw.githubusercontent.com/piexlmax/registry"
+const ROW = "https://raw.githubusercontent.com/selefra/registry"
 
 type ModulesMetadata struct {
 	Name          string   `json:"name" yaml:"name"`
@@ -220,6 +225,8 @@ func getModulesModulesSupplement(ctx context.Context, modulesName, version strin
 	return supplement, err
 }
 
+var LatestVersion string
+
 func ModulesUpdate(modulesName string, modulesPath string) error {
 	_, config, err := Home()
 	if err != nil {
@@ -234,18 +241,24 @@ func ModulesUpdate(modulesName string, modulesPath string) error {
 	if err != nil {
 		return err
 	}
-	metadata, err := getModulesMetadata(context.Background(), modulesName)
-	if err != nil {
-		return err
-	}
-	if configMap["modules"+"/"+modulesName] == metadata.LatestVersion {
-		return nil
-	} else {
-		supplement, err := getModulesModulesSupplement(context.Background(), modulesName, metadata.LatestVersion)
+	if LatestVersion == "" {
+		metadata, err := getModulesMetadata(context.Background(), modulesName)
 		if err != nil {
 			return err
 		}
-		url := supplement.Source + "/releases/download/" + metadata.LatestVersion + "/" + modulesName + ".zip"
+		LatestVersion = metadata.LatestVersion
+	}
+	if err != nil {
+		return err
+	}
+	if configMap["modules"+"/"+modulesName] == LatestVersion {
+		return nil
+	} else {
+		supplement, err := getModulesModulesSupplement(context.Background(), modulesName, LatestVersion)
+		if err != nil {
+			return err
+		}
+		url := supplement.Source + "/releases/download/" + LatestVersion + "/" + modulesName + ".zip"
 		err = os.RemoveAll(filepath.Join(modulesPath, modulesName))
 		if err != nil {
 			return err
@@ -254,7 +267,7 @@ func ModulesUpdate(modulesName string, modulesPath string) error {
 		if err != nil {
 			return err
 		}
-		configMap["modules"+"/"+modulesName] = metadata.LatestVersion
+		configMap["modules"+"/"+modulesName] = LatestVersion
 		c, err := json.Marshal(configMap)
 		if err != nil {
 			return err

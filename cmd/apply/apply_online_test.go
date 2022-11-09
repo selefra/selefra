@@ -38,7 +38,7 @@ func TestGetRulesOnline(t *testing.T) {
 	if err != nil {
 		t.Error(e)
 	}
-	err = RunRules(ctx, c, "", useRules)
+	err = RunRules(ctx, c, s.Selefra.Cloud.Project, useRules)
 	if err != nil {
 		t.Error(err)
 	}
