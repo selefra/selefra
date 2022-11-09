@@ -31,4 +31,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           TZ: Asia/Shanghai
           #SELEFRA_DATABASE_DSN: "host=127.0.0.1 user=postgres password=pass port=5432 dbname=test sslmode=disable"
-        run: go test ./cmd/provider && go test $(go list ./... | grep -v ./cmd/provider)
+        run: go mod tidy && go test ./cmd/provider && go test $(go list ./... | grep -v ./cmd/provider)
