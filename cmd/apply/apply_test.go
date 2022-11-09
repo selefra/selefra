@@ -5,11 +5,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui/client"
 	"testing"
 )
 
 func TestGetRules(t *testing.T) {
+	ws.Init()
 	*global.WORKSPACE = "../../tests/workspace/offline"
 	modules, err := config.GetModulesByPath()
 	if err != nil {
