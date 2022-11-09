@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui/client"
 	"testing"
 )
@@ -14,6 +15,7 @@ func TestGetRulesOnline(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 		return
 	}
+	ws.Init()
 	global.SERVER = "dev-api.selefra.io"
 	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
 	*global.WORKSPACE = "../../tests/workspace/online"
