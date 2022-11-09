@@ -9,7 +9,7 @@ import (
 func TestInstall(t *testing.T) {
 	*global.WORKSPACE = "../../tests/workspace/offline"
 	ctx := context.Background()
-	err := install(ctx, []string{"aws@v0.0.4"})
+	err := install(ctx, []string{"aws@latest"})
 	if err != nil {
 		t.Error(err)
 	}

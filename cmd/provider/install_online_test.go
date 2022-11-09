@@ -11,7 +11,7 @@ func TestInstallOnline(t *testing.T) {
 	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
 	*global.WORKSPACE = "../../tests/workspace/online"
 	ctx := context.Background()
-	err := install(ctx, []string{"aws@v0.0.4"})
+	err := install(ctx, []string{"aws@latest"})
 	if err != nil {
 		t.Error(err)
 	}

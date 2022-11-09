@@ -14,7 +14,7 @@ func TestRemoveOnline(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = install(context.Background(), []string{"aws@v0.0.4"})
+	err = install(context.Background(), []string{"aws@latest"})
 	if err != nil {
 		t.Error(err)
 	}
