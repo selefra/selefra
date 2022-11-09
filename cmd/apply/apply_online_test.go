@@ -2,53 +2,9 @@ package apply
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
-	"github.com/selefra/selefra/pkg/ws"
-	"github.com/selefra/selefra/ui/client"
 	"testing"
 )
-
-func TestGetRulesOnline(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-		return
-	}
-	ws.Init()
-	global.SERVER = "dev-api.selefra.io"
-	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
-	*global.WORKSPACE = "../../tests/workspace/online"
-	modules, err := config.GetModulesByPath()
-	if err != nil {
-		t.Error(err)
-	}
-	rules := RunRulesWithoutModule()
-	rulesTwo := CreateRulesByModule(modules)
-	if len(*rules) == 0 && len(rulesTwo) == 0 {
-		t.Error("rules is empty")
-	}
-
-	var useRules []config.Rule
-	if len(rulesTwo) != 0 {
-		useRules = rulesTwo
-	}
-	if len(*rules) != 0 {
-		useRules = *rules
-	}
-	ctx := context.Background()
-	uid, _ := uuid.NewUUID()
-	s := config.SelefraConfig{}
-	err = s.GetConfig()
-	c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid)
-	if err != nil {
-		t.Error(e)
-	}
-	err = RunRules(ctx, c, s.Selefra.Cloud.Project, useRules)
-	if err != nil {
-		t.Error(err)
-	}
-}
 
 func TestApplyOnLine(t *testing.T) {
 	if testing.Short() {
