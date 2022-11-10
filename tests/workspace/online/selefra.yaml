@@ -8,6 +8,9 @@ selefra:
         - name: aws
           source: selefra/aws@latest
           version: latest
+          resources:
+            - aws_s3_buckets
+            - aws_s3_accounts
 providers:
     - name: aws
       ##  Optional, Repeated. Add an accounts block for every account you want to assume-role into and fetch data from.
