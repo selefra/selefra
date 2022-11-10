@@ -47,6 +47,7 @@ jobs:
           files: |
             dist/*checksums.txt
             dist/*.tar.gz
+            dist/*.zip
           prerelease: true
           generate_release_notes: true
           token: ${{ secrets.SELEFRA_TOKEN }}
