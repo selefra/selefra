@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
+	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/logger"
+	"github.com/selefra/selefra/pkg/ws"
 	"runtime"
+	"time"
 )
 
 var defaultLogger *logger.Logger
@@ -37,6 +41,44 @@ var (
 	SuccessColor = color.New(color.FgGreen, color.Bold)
 	BaseColor    = color.New(color.FgBlack, color.Bold)
 )
+
+type LogJOSN struct {
+	Cmd   string    `json:"cmd"`
+	Stag  string    `json:"stag"`
+	Msg   string    `json:"msg"`
+	Time  time.Time `json:"time"`
+	Level string    `json:"level"`
+}
+
+func createLog(msg string, c *color.Color) string {
+	var level string
+	switch c {
+	case ErrorColor:
+		level = "error"
+	case WarningColor:
+		level = "warn"
+	case InfoColor:
+		level = "info"
+	case SuccessColor:
+		level = "success"
+	case BaseColor:
+		level = "base"
+	default:
+		level = "info"
+	}
+	l := LogJOSN{
+		Cmd:   global.CMD,
+		Stag:  global.STAG,
+		Msg:   msg,
+		Time:  time.Now(),
+		Level: level,
+	}
+	b, err := json.Marshal(l)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
 
 func PrintErrorF(format string, a ...interface{}) {
 	InitLogger()
@@ -113,13 +155,23 @@ func PrintInfoLn(a ...interface{}) {
 }
 
 func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
 	_, _ = c.Printf(format+"\n", a...)
 }
 
+func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	_, _ = c.Printf(format, a...)
+}
+
 func PrintCustomizeLn(c *color.Color, a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintln(a...), c))
 	_, _ = c.Println(a...)
 }
 
+func PrintCustomizeLnNotShow(a ...interface{}) {
+	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+}
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
 	InitLogger()
 	var err error

@@ -1,6 +1,3 @@
-package init
-
-const ruleComment = `
 rules:
   - name: ebs_volume_are_unencrypted
     query: |
@@ -28,11 +25,3 @@ rules:
       title: EBS volume are unencrypted
       description: Ensure that EBS volumes are encrypted.
     output: 'EBS volume are unencrypted, EBS id: {{.id}}, availability zone: {{.availability_zone}}'
-`
-
-const moduleComment = `
-modules:
-  - name: AWS_Security_Demo
-    uses:
-    - ./rules/iam_mfa.yaml
-`

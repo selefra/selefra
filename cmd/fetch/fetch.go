@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/selefra/selefra-provider-sdk/grpc/shard"
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/pointer"
@@ -26,6 +27,7 @@ func NewFetchCmd() *cobra.Command {
 		Short: "Fetch resources from configured providers",
 		Long:  "Fetch resources from configured providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			global.CMD = "fetch"
 			ctx := cmd.Context()
 			var cof = &config.SelefraConfig{}
 
@@ -43,10 +45,8 @@ func NewFetchCmd() *cobra.Command {
 				}
 			}
 
-			ui.PrintSuccessF(`
-This may be exception, view detailed exception in %s.
-
-Need help? Know on Slack or open a Github Issue: https://github.com/selefra/selefra#community`,
+			ui.PrintErrorF(`
+This may be exception, view detailed exception in %s.`,
 				filepath.Join(*global.WORKSPACE, "logs"))
 
 			return nil
@@ -63,6 +63,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	var providersName = utils.GetNameBySource(*p.Source)
 	ui.PrintSuccessF("%s@%s pull infrastructure data:\n", providersName, p.Version)
+	ui.PrintCustomizeLnNotShow(fmt.Sprintf("Pulling %s@%s Please wait for resource information ...", providersName, p.Version))
 	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
 		return err
@@ -119,9 +120,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
 		return errors.New("fetch provider create table error")
 	}
-
+	var tables []string
+	if len(p.Resources) == 0 {
+		tables = append(tables, "*")
+	} else {
+		for i := range p.Resources {
+			tables = append(tables, p.Resources[i])
+		}
+	}
 	recv, err := provider.PullTables(ctx, &shard.PullTablesRequest{
-		Tables:        []string{"*"},
+		Tables:        tables,
 		MaxGoroutines: 100,
 		Timeout:       0,
 	})

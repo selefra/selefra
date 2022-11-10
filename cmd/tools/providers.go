@@ -77,21 +77,23 @@ func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary
 	return nil
 }
 
-func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.SelefraConfig) {
-
-	source := utils.CreateSource(provider.Name, provider.Version)
-
+func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.SelefraConfig, configVersion string) error {
+	source, latestSource := utils.CreateSource(provider.Name, provider.Version, configVersion)
 	_, configPath, err := utils.Home()
 	if err != nil {
 		ui.PrintErrorLn("SetSelefraProviderError: " + err.Error())
+		return err
 	}
 	var pathMap = make(map[string]string)
 	file, err := os.ReadFile(configPath)
 	if err != nil {
 		ui.PrintErrorLn("SetSelefraProviderError: " + err.Error())
+		return err
 	}
 	json.Unmarshal(file, &pathMap)
-
+	if latestSource != "" {
+		pathMap[latestSource] = provider.Filepath
+	}
 	pathMap[source] = provider.Filepath
 
 	pathMapJson, err := json.Marshal(pathMap)
@@ -101,10 +103,12 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 	}
 
 	err = os.WriteFile(configPath, pathMapJson, 0644)
-
-	selefraConfig.Selefra.Providers = append(selefraConfig.Selefra.Providers, &config.ProviderRequired{
-		Name:    provider.Name,
-		Source:  &source,
-		Version: provider.Version,
-	})
+	if selefraConfig != nil {
+		selefraConfig.Selefra.Providers = append(selefraConfig.Selefra.Providers, &config.ProviderRequired{
+			Name:    provider.Name,
+			Source:  &source,
+			Version: provider.Version,
+		})
+	}
+	return nil
 }

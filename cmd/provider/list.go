@@ -11,6 +11,7 @@ import (
 )
 
 func newCmdProviderList() *cobra.Command {
+	global.CMD = "provider list"
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List currently installed plugins",
@@ -22,26 +23,35 @@ func newCmdProviderList() *cobra.Command {
 				return nil
 			}
 			*global.WORKSPACE = wd
-
-			b, err := config.GetClientStr()
-			if err != nil {
-				ui.PrintErrorLn("Error:" + err.Error())
-				return nil
-			}
-			var configYaml config.SelefraConfig
-			err = yaml.Unmarshal(b, &configYaml)
-			if err != nil {
-				ui.PrintErrorLn("Error:" + err.Error())
-				return nil
-			}
-			fmt.Printf("  %-13s %-26s %s\n", "Name", "Source", "Version")
-			for _, provider := range configYaml.Selefra.Providers {
-				fmt.Printf("  %-13s %-26s %s\n", provider.Name, *provider.Source, provider.Version)
-			}
-			return nil
+			err = list()
+			return err
 		},
 	}
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
 	return cmd
+}
+
+func list() error {
+	err := config.IsSelefra()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
+	b, err := config.GetClientStr()
+	if err != nil {
+		ui.PrintErrorLn("Error:" + err.Error())
+		return nil
+	}
+	var configYaml config.SelefraConfig
+	err = yaml.Unmarshal(b, &configYaml)
+	if err != nil {
+		ui.PrintErrorLn("Error:" + err.Error())
+		return nil
+	}
+	fmt.Printf("  %-13s %-26s %s\n", "Name", "Source", "Version")
+	for _, provider := range configYaml.Selefra.Providers {
+		fmt.Printf("  %-13s %-26s %s\n", provider.Name, *provider.Source, provider.Version)
+	}
+	return nil
 }
