@@ -3,6 +3,7 @@ package apply
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
@@ -68,14 +69,14 @@ func Apply(ctx context.Context) error {
 		if global.LOGINTOKEN == "" {
 			global.LOGINTOKEN = token
 		}
-		_, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
+		_, taskId, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
 		}
-		res, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project)
+		taskRes, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project, taskId)
 		if err == nil {
-			err := ws.Regis(token, res.Data.TaskId)
+			err := ws.Regis(token, taskRes.Data.TaskUUID)
 			if err != nil {
 				ui.PrintWarningLn(err.Error())
 			}
@@ -220,6 +221,11 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				outMap[key] = value
 			}
 			baseRow = outMap
+			baseRowStr, err := json.Marshal(baseRow)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return err
+			}
 			out, err := fmtTemplate(outPut, outMap)
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
@@ -251,7 +257,7 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				ResourceRegion:    ResourceRegion,
 				Title:             rule.Metadata.Title,
 				Description:       desc,
-				Output:            out,
+				Output:            string(baseRowStr),
 			})
 			ui.PrintSuccessLn("	" + out)
 		}
