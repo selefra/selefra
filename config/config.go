@@ -116,6 +116,7 @@ type ProviderRequired struct {
 	Source    *string  `yaml:"source,omitempty" json:"source,omitempty"`
 	Version   string   `yaml:"version,omitempty" json:"version,omitempty"`
 	Path      string   `yaml:"path" json:"path"`
+	Cache     string   `yaml:"cache" json:"cache"`
 	Resources []string `yaml:"resources" json:"resources"`
 }
 
@@ -143,7 +144,7 @@ type YamlKey int
 type ConfigMap map[string]map[string]string
 type FileMap map[string]string
 
-func (c *Config) GetDSN() string {
+func (c *Config) GetDSN(p *ProviderRequired) string {
 	var db *DB
 
 	token, err := utils.GetCredentialsToken()
@@ -175,7 +176,13 @@ func (c *Config) GetDSN() string {
 			Extras:   nil,
 		}
 	}
-	DSN := "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
+	var DSN string
+	if p != nil {
+		searchPath := p.Name + *(p.Source)
+		DSN = "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable search_path=" + searchPath
+	} else {
+		DSN = "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
+	}
 	return DSN
 }
 
@@ -769,6 +776,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			providersMap["name"] = nil
 			providersMap["source"] = nil
 			providersMap["version"] = nil
+			providersMap["cache"] = new(yaml.Node)
 			providersMap["path"] = new(yaml.Node)
 			providersMap["resources"] = new(yaml.Node)
 			yamlPath := fmt.Sprintf("selefra.providers[%d]:", index)

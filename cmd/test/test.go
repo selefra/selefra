@@ -110,7 +110,7 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 			continue
 		}
 
-		storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN())
+		storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN(nil))
 		opt, err := json.Marshal(storage)
 
 		provider := plug.Provider()

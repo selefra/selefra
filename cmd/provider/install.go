@@ -110,7 +110,7 @@ func install(ctx context.Context, args []string) error {
 		}
 
 		plugProvider := plug.Provider()
-		storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN())
+		storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN(nil))
 		opt, err := json.Marshal(storage)
 		initRes, err := plugProvider.Init(ctx, &shard.ProviderInitRequest{
 			Workspace: global.WORKSPACE,

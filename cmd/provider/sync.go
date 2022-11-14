@@ -63,14 +63,23 @@ func Sync() (errLogs []string, err error) {
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
+		need, _ := tools.NeedFetch(*p)
+		if !need {
+			continue
+		}
 		err = fetch.Fetch(ctx, cof, p)
 		if err != nil {
 			ui.PrintErrorF("%s %s Synchronization failed：%s", p.Name, p.Version, err.Error())
 			hasError = true
 			continue
 		}
+		err = tools.SetProviderCache(*p)
+		if err != nil {
+			ui.PrintWarningF("%s %s set cache time failed：%s", p.Name, p.Version, err.Error())
+			hasError = true
+			continue
+		}
 	}
-
 	if hasError {
 		ui.PrintErrorF(`
 This may be exception, view detailed exception in %s .

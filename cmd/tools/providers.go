@@ -8,6 +8,9 @@ import (
 	"github.com/selefra/selefra/ui"
 	"gopkg.in/yaml.v3"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 func GetProviders(config *config.SelefraConfig, key string) (string, error) {
@@ -111,4 +114,82 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 		})
 	}
 	return nil
+}
+
+func SetProviderCache(required config.ProviderRequired) error {
+	_, configPath, err := utils.Home()
+	if err != nil {
+		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
+		return err
+	}
+	var pathMap = make(map[string]string)
+	file, err := os.ReadFile(configPath)
+	if err != nil {
+		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
+		return err
+	}
+	json.Unmarshal(file, &pathMap)
+
+	pathMap[required.Name+":cache"] = time.Now().Format(time.RFC3339)
+
+	pathMapJson, err := json.Marshal(pathMap)
+
+	if err != nil {
+		ui.PrintErrorLn("SetSelefraProviderCache: " + err.Error())
+	}
+
+	err = os.WriteFile(configPath, pathMapJson, 0644)
+	return err
+}
+
+func NeedFetch(required config.ProviderRequired) (bool, error) {
+	_, configPath, err := utils.Home()
+	if err != nil {
+		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
+		return true, err
+	}
+	var pathMap = make(map[string]string)
+	file, err := os.ReadFile(configPath)
+	if err != nil {
+		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
+		return true, err
+	}
+	err = json.Unmarshal(file, &pathMap)
+	if err != nil {
+		return true, err
+	}
+	fetchTime, err := time.ParseInLocation(time.RFC3339, pathMap[required.Name+":cache"], time.Local)
+	if err != nil {
+		return true, err
+	}
+	duration, err := parseDuration(required.Cache)
+	if err != nil {
+		return true, err
+	}
+	if time.Now().Sub(fetchTime) > duration {
+		return true, nil
+	}
+	return false, nil
+}
+
+func parseDuration(d string) (time.Duration, error) {
+	d = strings.TrimSpace(d)
+	dr, err := time.ParseDuration(d)
+	if err == nil {
+		return dr, nil
+	}
+	if strings.Contains(d, "d") {
+		index := strings.Index(d, "d")
+
+		hour, _ := strconv.Atoi(d[:index])
+		dr = time.Hour * 24 * time.Duration(hour)
+		ndr, err := time.ParseDuration(d[index+1:])
+		if err != nil {
+			return dr, nil
+		}
+		return dr + ndr, nil
+	}
+
+	dv, err := strconv.ParseInt(d, 10, 64)
+	return time.Duration(dv), err
 }

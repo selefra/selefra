@@ -69,7 +69,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		return err
 	}
 
-	storage := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	storage := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN(p))
 	opt, err := json.Marshal(storage)
 	if err != nil {
 		return err

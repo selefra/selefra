@@ -48,7 +48,7 @@ func CreateYaml(cmd *cobra.Command) (*config.SelefraConfig, error) {
 	ctx := cmd.Context()
 	configYaml := config.SelefraConfig{}
 	configYaml.Selefra.CliVersion = version.Version
-	storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN())
+	storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN(nil))
 
 	_, diag := postgresql_storage.NewPostgresqlStorage(ctx, storage)
 	if diag != nil && diag.HasError() {

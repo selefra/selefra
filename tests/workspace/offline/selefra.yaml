@@ -5,6 +5,7 @@ selefra:
         - name: aws
           source: selefra/aws@latest
           version: latest
+          cache: 1d
           resources:
             - aws_s3_buckets
             - aws_s3_accounts

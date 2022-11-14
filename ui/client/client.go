@@ -34,8 +34,8 @@ func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId 
 		PluginManager: pm,
 		instanceId:    instanceId,
 	}
-	if cfg.GetDSN() != "" {
-		options := postgres.NewPostgresqlStorageOptions(cfg.GetDSN())
+	if cfg.GetDSN(nil) != "" {
+		options := postgres.NewPostgresqlStorageOptions(cfg.GetDSN(nil))
 		sto, err := storage_factory.NewStorage(ctx, storage_factory.StorageTypePostgresql, options)
 		if err != nil && err.HasError() {
 			ui.PrintDiagnostic(err.GetDiagnosticSlice())
