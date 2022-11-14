@@ -44,7 +44,7 @@ func (c connClient) Close() error {
 
 func Init() {
 	di := websocket.Dialer{}
-	conn, _, err := di.Dial("ws://"+global.SERVER+"/cli/ws/log_stream", nil)
+	conn, _, err := di.Dial("wss://"+global.SERVER+"/cli/ws/log_stream", nil)
 	if err != nil {
 		return
 	}

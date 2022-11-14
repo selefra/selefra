@@ -226,6 +226,8 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				ui.PrintErrorLn(err.Error())
 				return err
 			}
+			var outByte bytes.Buffer
+			err = json.Indent(&outByte, baseRowStr, "", "\t")
 			out, err := fmtTemplate(outPut, outMap)
 			if err != nil {
 				ui.PrintErrorLn(err.Error())
@@ -257,7 +259,7 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				ResourceRegion:    ResourceRegion,
 				Title:             rule.Metadata.Title,
 				Description:       desc,
-				Output:            string(baseRowStr),
+				Output:            outByte.String(),
 			})
 			ui.PrintSuccessLn("	" + out)
 		}

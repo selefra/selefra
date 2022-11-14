@@ -11,8 +11,8 @@ func TestApplyOnLine(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 		return
 	}
-	global.SERVER = "dev-api.selefra.io"
-	global.LOGINTOKEN = "4fe8ed36488c479d0ba7292fe09a4132"
+	global.SERVER = "sfc.shubo6.cn:8443"
+	global.LOGINTOKEN = "eff6532520a9919cd785669aa1c6d735"
 	*global.WORKSPACE = "../../tests/workspace/online"
 	err := Apply(context.Background())
 	if err != nil {
