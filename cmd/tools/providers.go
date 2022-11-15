@@ -142,7 +142,7 @@ func SetProviderCache(required config.ProviderRequired) error {
 	return err
 }
 
-func NeedFetch(required config.ProviderRequired) (bool, error) {
+func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
 	_, configPath, err := utils.Home()
 	if err != nil {
 		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
@@ -162,7 +162,11 @@ func NeedFetch(required config.ProviderRequired) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	duration, err := parseDuration(required.Cache)
+	cp, err := cof.GetProvider(required.Name)
+	if err != nil {
+		return true, err
+	}
+	duration, err := parseDuration(cp.Cache)
 	if err != nil {
 		return true, err
 	}

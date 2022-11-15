@@ -63,7 +63,7 @@ func Sync() (errLogs []string, err error) {
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
-		need, _ := tools.NeedFetch(*p)
+		need, _ := tools.NeedFetch(*p, *cof)
 		if !need {
 			continue
 		}

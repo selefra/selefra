@@ -34,6 +34,32 @@ var typeMap = map[string]bool{
 	RULES:     true,
 }
 
+type CliProviders struct {
+	Cache     string   `yaml:"cache" json:"cache"`
+	Resources []string `yaml:"resources" json:"resources"`
+}
+
+func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
+	var cp CliProviders
+	for _, group := range c.Providers.Content {
+		for i, node := range group.Content {
+			if node.Kind == yaml.ScalarNode && node.Value == "name" && group.Content[i+1].Value == name {
+				b, err := yaml.Marshal(group)
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					return cp, err
+				}
+				err = yaml.Unmarshal(b, &cp)
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					return cp, err
+				}
+			}
+		}
+	}
+	return cp, nil
+}
+
 type SelefraConfig struct {
 	Selefra   Config    `yaml:"selefra"`
 	Providers yaml.Node `yaml:"providers"`
@@ -112,12 +138,10 @@ type ConfigInitWithLogin struct {
 }
 
 type ProviderRequired struct {
-	Name      string   `yaml:"name,omitempty" json:"name,omitempty"`
-	Source    *string  `yaml:"source,omitempty" json:"source,omitempty"`
-	Version   string   `yaml:"version,omitempty" json:"version,omitempty"`
-	Path      string   `yaml:"path" json:"path"`
-	Cache     string   `yaml:"cache" json:"cache"`
-	Resources []string `yaml:"resources" json:"resources"`
+	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
+	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
+	Path    string  `yaml:"path" json:"path"`
 }
 
 type ProviderRequiredInit struct {
@@ -776,9 +800,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			providersMap["name"] = nil
 			providersMap["source"] = nil
 			providersMap["version"] = nil
-			providersMap["cache"] = new(yaml.Node)
 			providersMap["path"] = new(yaml.Node)
-			providersMap["resources"] = new(yaml.Node)
 			yamlPath := fmt.Sprintf("selefra.providers[%d]:", index)
 			err = checkNode(providersMap, node.Content, pathStr, yamlPath)
 			if err != nil {
@@ -919,9 +941,6 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	err = yaml.Unmarshal(clientByte, &c)
 	if err != nil {
 		return nil, err
-	}
-	if err != nil {
-		return config, err
 	}
 	return config, nil
 }

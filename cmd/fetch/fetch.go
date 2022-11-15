@@ -121,11 +121,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		return errors.New("fetch provider create table error")
 	}
 	var tables []string
-	if len(p.Resources) == 0 {
+	cp, err := cof.GetProvider(p.Name)
+	if err != nil {
+		return err
+	}
+	resources := cp.Resources
+	if len(resources) == 0 {
 		tables = append(tables, "*")
 	} else {
-		for i := range p.Resources {
-			tables = append(tables, p.Resources[i])
+		for i := range resources {
+			tables = append(tables, resources[i])
 		}
 	}
 	recv, err := provider.PullTables(ctx, &shard.PullTablesRequest{
