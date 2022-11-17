@@ -4,7 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"text/template"
+
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v3"
+
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/config"
@@ -14,14 +24,6 @@ import (
 	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/client"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-	"text/template"
 )
 
 func NewApplyCmd() *cobra.Command {
@@ -69,12 +71,12 @@ func Apply(ctx context.Context) error {
 		if global.LOGINTOKEN == "" {
 			global.LOGINTOKEN = token
 		}
-		_, taskId, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
+		_, err := httpClient.CreateProject(token, s.Selefra.Cloud.Project)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
 		}
-		taskRes, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project, taskId)
+		taskRes, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project)
 		if err == nil {
 			err := ws.Regis(token, taskRes.Data.TaskUUID)
 			if err != nil {
