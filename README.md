@@ -1,6 +1,6 @@
 <h1 align="center">
     <a href="https://www.selefra.io" title="Selefra - Infrastructure as Code for Infrastructure Analysis.">
-        <img src=".github/images/logo.png" width="350">
+        <img src=".github/images/logo_colorbg.png" width="900">
     </a>
     <p align="center">
     <a href="https://github.com/selefra/selefra/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/selefra/selefra"/></a>
@@ -8,9 +8,9 @@
     <a href="https://github.com/selefra/selefra/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MPL%202.0-blue.svg"/></a>
     <a href="https://github.com/selefra/selefra/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/selefra/selefra/total?color=blue"/></a>
     <a href="https://goreportcard.com/report/github.com/selefra/selefra"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/selefra/selefra"/></a>
-    <a href="https://twitter.com/SelefraCorp"><img alt="tweet" src="https://img.shields.io/twitter/url?url=https://github.com/selefra/selefra" /></a>
     <a href="https://twitter.com/SelefraCorp"><img alt="Twitter" src="https://img.shields.io/twitter/follow/SelefraCorp?style=social" /></a>
-    <a href="https://github.com/selefra"><img alt="Github" src="https://img.shields.io/github/followers/selefra?style=social" /></a><br></br>
+    <a href="https://github.com/selefra"><img alt="Github" src="https://img.shields.io/github/followers/selefra?style=social" /></a>
+    <a href="https://selefra.io/community/join"><img alt="Slack" src="https://img.shields.io/badge/Join%20Slack-%40Selefra-red" /></a><br></br>    
     </p>
 </h1>
 
@@ -23,39 +23,42 @@ Selefra is an open-source cloud governance tool to analyze multi-cloud assets fo
 
 With rules written in YAML and SQL, Selefra automatically pulls data from providers including AWS, GCP, Azure, and [more](https://github.com/selefra/selefra).
 
-For example, a rule to check if *AWS S3 bucket is misconfigured*:
+For example, a rule to check if *EBS volume are unencrypted*:
 
 ```yaml
 selefra:
-  name: selefra-demo
-  cli_version: ">=0.0.1"
-  providers:
-    - name: aws
-      source: 'selefra/aws'
-      version: "latest"
-  connection:
-    type: postgres
-    username: postgres
-    password: pass
-    host: localhost
-    port: 5432
-    database: postgres
-    sslmode: disable
+    name: example_project
+    cli_version: v0.0.1
+    providers:
+        - name: aws
+          source: selefra/aws
+          version: v0.0.3
 
 providers:
-  - name: aws
-    regions:
-      - us-east-1
-      
+    - name: aws
+      cache: 1d1h1m1s
+      resources:
+        - aws_*
+      accounts:
+         regions:
+           - us-east-1
 rules:
-  - name: Disabled_MFA
-    query: select * from aws_iam_users where user_name = '<root_account>' and mfa_active = 'f'
-    labels:
-      severity: Critical
-    metadata:
-      title: "MFA is disabled for root user"
-      description: "MFA is disabled for root user"
-    output: "AWS user has disabled MFA, username: {{.user_name}}"
+  - name: example_rule_name
+    query: SELECT * FROM aws_ec2_ebs_volumes WHERE encrypted = FALSE
+    labels: 
+      tag: demo_rule
+      author: Selefra
+    metadata: 
+      severity: Low
+      provider: AWS
+      resource_type: EC2 
+      resource_account_id: '{{.account_id}}'
+      resource_id: '{{.id}}'
+      resource_region: '{{.availability_zone}}'
+      remediation: remediation/ebs_volume_are_unencrypted.md 
+      title: EBS volume are unencrypted 
+      description: Ensure that EBS volumes are encrypted.
+    output: 'EBS volume is unencrypted, EBS id: {{.id}}, availability zone: {{.availability_zone}}'
 ```
 
 ## Getting Started
@@ -71,25 +74,25 @@ Otherwise, run a demo through the following steps, it should take less than a fe
 If you are MacOS user, tap Selefra with Homebrew.
 
 ```bash
-brew tap selefra/tap
+$ brew tap selefra/tap
 ```
 
 Now, install Selefra
 
 ```bash
-brew install selefra/tap/selefra
+$ brew install selefra/tap/selefra
 ```
 
 ### 2. Create a project
 
 ```bash
-selefra init selefra-demo && cd selefra-demo
+$ selefra init selefra-demo && cd selefra-demo
 ```
 
 ### 3. Build code for the project
 
 ```bash
-selefra apply 
+$ selefra apply 
 ```
 
 
@@ -101,8 +104,9 @@ See [Docs](https://selefra.io/docs) for best practices and detailed instructions
 
 Selefra is a community-driven project, we welcome you to open a [GitHub Issue](https://github.com/selefra/selefra/issues/new/choose) to report a bug, suggest an improvement, or request new feature.
 
--  Join [Selefra Community](https://selefra.slack.com) on Slack. We host `Community Hour` for tutorials and Q&As on regular basis.
+-  Join [Selefra Community](https://selefra.io/community/join) on Slack. We host `Community Hour` for tutorials and Q&As on regular basis.
 -  Follow us on [Twitter](https://twitter.com/SelefraCorp) and share your thoughts！
+-  Email us at support@selefra.io
 
 ## CONTRIBUTING
 
