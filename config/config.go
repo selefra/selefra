@@ -265,6 +265,7 @@ func GetSchemaKey(required *ProviderRequired, cfg Config) string {
 	}
 	source := strings.Replace(*required.Source, "/", "_", -1)
 	source = strings.Replace(source, "@", "_", -1)
+	source = strings.Replace(source, ".", "", -1)
 	s := source + "_" + required.Name
 	return pre + s
 }
