@@ -245,14 +245,28 @@ func ReplaceStringByRegex(str, rule, replace string) (string, error) {
 	return reg.ReplaceAllString(str, replace), nil
 }
 
-func GetSchema(required *ProviderRequired) string {
+func SelefraMetadata() string {
+	return "selefra_metadata"
+}
+
+func GetCacheKey(required *ProviderRequired, cli Config) string {
+	return GetSchemaKey(required, cli) + "_cache"
+}
+
+func GetSchemaKey(required *ProviderRequired, cfg Config) string {
+	var pre string
+	if cfg.Cloud != nil && cfg.Cloud.Organization != "" && cfg.Cloud.Project != "" {
+		pre = cfg.Cloud.Organization + "_" + cfg.Cloud.Project + "_"
+	} else {
+		pre = "local_"
+	}
 	if required == nil {
-		return "public"
+		return pre + "public"
 	}
 	source := strings.Replace(*required.Source, "/", "_", -1)
 	source = strings.Replace(source, "@", "_", -1)
 	s := source + "_" + required.Name
-	return s
+	return pre + s
 }
 
 func IsSelefra() error {

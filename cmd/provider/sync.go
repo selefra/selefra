@@ -11,6 +11,7 @@ import (
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"path/filepath"
+	"time"
 )
 
 func Sync() (errLogs []string, err error) {
@@ -73,7 +74,8 @@ func Sync() (errLogs []string, err error) {
 			hasError = true
 			continue
 		}
-		err = tools.SetProviderCache(*p)
+		requireKey := config.GetCacheKey(p, cof.Selefra)
+		err = tools.SetStoreValue(*cof, requireKey, time.Now().Format(time.RFC3339))
 		if err != nil {
 			ui.PrintWarningF("%s %s set cache time failed：%s", p.Name, p.Version, err.Error())
 			hasError = true

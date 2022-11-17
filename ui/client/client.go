@@ -36,7 +36,7 @@ func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId 
 	}
 	if cfg.GetDSN() != "" {
 		options := postgres.NewPostgresqlStorageOptions(cfg.GetDSN())
-		schema := config.GetSchema(provider)
+		schema := config.GetSchemaKey(provider, *cfg)
 		options.SearchPath = schema
 		sto, err := storage_factory.NewStorage(ctx, storage_factory.StorageTypePostgresql, options)
 		if err != nil && err.HasError() {

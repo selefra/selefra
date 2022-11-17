@@ -1,7 +1,10 @@
 package tools
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/selefra/selefra-provider-sdk/provider/schema"
+	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/pkg/registry"
 	"github.com/selefra/selefra/pkg/utils"
@@ -116,49 +119,58 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 	return nil
 }
 
-func SetProviderCache(required config.ProviderRequired) error {
-	_, configPath, err := utils.Home()
+func GetStoreValue(cof config.SelefraConfig, key string) (string, error) {
+	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	storageOpt.SearchPath = config.SelefraMetadata()
+	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
+	if diag != nil && diag.HasError() {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+		return "", err
+	}
+	stoLogger, err := ui.StoLogger()
 	if err != nil {
-		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
+		return "", err
+	}
+	meta := &schema.ClientMeta{ClientLogger: stoLogger}
+	store.SetClientMeta(meta)
+	t, diag := store.GetValue(context.Background(), key)
+	if diag != nil && diag.HasError() {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+		return "", err
+	}
+	return t, nil
+}
+
+func SetStoreValue(cof config.SelefraConfig, key, value string) error {
+	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	storageOpt.SearchPath = config.SelefraMetadata()
+	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
+	if diag != nil && diag.HasError() {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 		return err
 	}
-	var pathMap = make(map[string]string)
-	file, err := os.ReadFile(configPath)
+
+	stoLogger, err := ui.StoLogger()
 	if err != nil {
-		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
 		return err
 	}
-	json.Unmarshal(file, &pathMap)
-
-	pathMap[required.Name+":cache"] = time.Now().Format(time.RFC3339)
-
-	pathMapJson, err := json.Marshal(pathMap)
-
-	if err != nil {
-		ui.PrintErrorLn("SetSelefraProviderCache: " + err.Error())
+	meta := &schema.ClientMeta{ClientLogger: stoLogger}
+	store.SetClientMeta(meta)
+	diag = store.SetKey(context.Background(), key, value)
+	if diag != nil && diag.HasError() {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+		return err
 	}
-
-	err = os.WriteFile(configPath, pathMapJson, 0644)
-	return err
+	return nil
 }
 
 func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
-	_, configPath, err := utils.Home()
-	if err != nil {
-		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
-		return true, err
-	}
-	var pathMap = make(map[string]string)
-	file, err := os.ReadFile(configPath)
-	if err != nil {
-		ui.PrintErrorLn("SetSelefraProviderCacheError: " + err.Error())
-		return true, err
-	}
-	err = json.Unmarshal(file, &pathMap)
+	requireKey := config.GetCacheKey(&required, cof.Selefra)
+	t, err := GetStoreValue(cof, requireKey)
 	if err != nil {
 		return true, err
 	}
-	fetchTime, err := time.ParseInLocation(time.RFC3339, pathMap[required.Name+":cache"], time.Local)
+	fetchTime, err := time.ParseInLocation(time.RFC3339, t, time.Local)
 	if err != nil {
 		return true, err
 	}

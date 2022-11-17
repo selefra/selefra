@@ -28,6 +28,18 @@ var defaultLogger, _ = logger.NewLogger(logger.Config{
 	Level:             "info",
 })
 
+func StoLogger() (*logger.StoLogger, error) {
+	return logger.NewStoLogger(logger.Config{
+		FileLogEnabled:    true,
+		ConsoleLogEnabled: false,
+		EncodeLogsAsJson:  true,
+		ConsoleNoColor:    true,
+		Source:            "client",
+		Directory:         "logs",
+		Level:             "info",
+	})
+}
+
 var wsLogger *os.File
 
 func init() {

@@ -148,7 +148,7 @@ Loading Selefra analysis code ...
 		}
 
 		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
-		schema := config.GetSchema(s.Selefra.Providers[i])
+		schema := config.GetSchemaKey(s.Selefra.Providers[i], s.Selefra)
 		err = RunRules(ctx, c, project, mRules, schema)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
