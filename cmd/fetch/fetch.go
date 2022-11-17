@@ -69,7 +69,9 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		return err
 	}
 
-	storage := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN(p))
+	storage := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	schema := config.GetSchema(p)
+	storage.SearchPath = schema
 	opt, err := json.Marshal(storage)
 	if err != nil {
 		return err
@@ -146,12 +148,12 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	progbar.Add(p.Name+"@"+p.Version, -1)
 	success := 0
 	errorsN := 0
+	var total int64
 	for {
-		current := 0
 		res, err := recv.Recv()
-
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				progbar.Current(p.Name+"@"+p.Version, total, "done")
 				progbar.Done(p.Name + "@" + p.Version)
 				break
 			}
@@ -170,19 +172,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		errorsN = errorsNum
 		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
 		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
+		total = int64(res.TableCount)
 		if res.Diagnostics != nil && res.Diagnostics.HasError() {
 			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
 		}
-
-		if res != nil {
-			for s := range res.FinishedTables {
-				if res.FinishedTables[s] {
-					current++
-				}
-			}
-		}
 	}
-	progbar.Wait(p.Name + "@" + p.Version)
 
 	ui.PrintSuccessF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
 	return nil

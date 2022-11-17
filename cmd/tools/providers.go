@@ -167,7 +167,7 @@ func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool
 		return true, err
 	}
 	duration, err := parseDuration(cp.Cache)
-	if err != nil {
+	if err != nil || duration == 0 {
 		return true, err
 	}
 	if time.Now().Sub(fetchTime) > duration {

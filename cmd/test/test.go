@@ -70,10 +70,13 @@ func checkConfig(ctx context.Context, c config.SelefraConfig) error {
 		return err
 	}
 	uid, _ := uuid.NewUUID()
-	_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid)
-	if e != nil {
-		return e
+	for i := range c.Selefra.Providers {
+		_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid, c.Selefra.Providers[i])
+		if e != nil {
+			return e
+		}
 	}
+
 	return nil
 }
 
@@ -110,7 +113,7 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 			continue
 		}
 
-		storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN(nil))
+		storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN())
 		opt, err := json.Marshal(storage)
 
 		provider := plug.Provider()

@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/selefra/selefra/global"
@@ -168,9 +169,8 @@ type YamlKey int
 type ConfigMap map[string]map[string]string
 type FileMap map[string]string
 
-func (c *Config) GetDSN(p *ProviderRequired) string {
+func (c *Config) GetDSN() string {
 	var db *DB
-
 	token, err := utils.GetCredentialsToken()
 	if token != "" && c.Cloud != nil && err == nil {
 		DSN, err := httpClient.GetDsn(token)
@@ -200,13 +200,7 @@ func (c *Config) GetDSN(p *ProviderRequired) string {
 			Extras:   nil,
 		}
 	}
-	var DSN string
-	if p != nil {
-		searchPath := p.Name + *(p.Source)
-		DSN = "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable search_path=" + searchPath
-	} else {
-		DSN = "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
-	}
+	DSN := "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
 	return DSN
 }
 
@@ -241,6 +235,24 @@ func GetAllConfig(dirname string, fileMap FileMap) (FileMap, error) {
 		}
 	}
 	return fileMap, nil
+}
+
+func ReplaceStringByRegex(str, rule, replace string) (string, error) {
+	reg, err := regexp.Compile(rule)
+	if reg == nil || err != nil {
+		return "", errors.New("正则MustCompile错误:" + err.Error())
+	}
+	return reg.ReplaceAllString(str, replace), nil
+}
+
+func GetSchema(required *ProviderRequired) string {
+	if required == nil {
+		return "public"
+	}
+	source := strings.Replace(*required.Source, "/", "_", -1)
+	source = strings.Replace(source, "@", "_", -1)
+	s := source + "_" + required.Name
+	return s
 }
 
 func IsSelefra() error {
