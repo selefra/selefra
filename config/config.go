@@ -255,15 +255,11 @@ func GetCacheKey(required *ProviderRequired, cli Config) string {
 
 func GetSchemaKey(required *ProviderRequired, cfg Config) string {
 	var pre string
-	if cfg.Cloud != nil && cfg.Cloud.Organization != "" && cfg.Cloud.Project != "" {
-		pre = cfg.Cloud.Organization + "_" + cfg.Cloud.Project + "_"
-	} else {
-		pre = "local_"
-	}
 	if required == nil {
 		return pre + "public"
 	}
-	source := strings.Replace(*required.Source, "/", "_", -1)
+	sourceArr := strings.Split(*required.Source, "/")
+	source := strings.Replace(sourceArr[1], "/", "_", -1)
 	source = strings.Replace(source, "@", "_", -1)
 	source = strings.Replace(source, ".", "", -1)
 	s := source + "_" + required.Name
