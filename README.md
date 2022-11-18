@@ -42,6 +42,7 @@ providers:
       accounts:
          regions:
            - us-east-1
+
 rules:
   - name: example_rule_name
     query: SELECT * FROM aws_ec2_ebs_volumes WHERE encrypted = FALSE
