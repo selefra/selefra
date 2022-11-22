@@ -52,7 +52,7 @@ func init() {
 			}
 			wsLogger, err = os.Create("ws.log")
 		} else {
-			wsLogger, err = os.Open("ws.log")
+			wsLogger, err = os.OpenFile("ws.log", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 		}
 		if err != nil {
 			panic("ws log file open error," + err.Error())

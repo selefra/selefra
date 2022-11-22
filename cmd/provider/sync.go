@@ -74,8 +74,8 @@ func Sync() (errLogs []string, err error) {
 			hasError = true
 			continue
 		}
-		requireKey := config.GetCacheKey(p, cof.Selefra)
-		err = tools.SetStoreValue(*cof, requireKey, time.Now().Format(time.RFC3339))
+		requireKey := config.GetCacheKey()
+		err = tools.SetStoreValue(*cof, p, requireKey, time.Now().Format(time.RFC3339))
 		if err != nil {
 			ui.PrintWarningF("%s %s set cache time failed：%s", p.Name, p.Version, err.Error())
 			hasError = true

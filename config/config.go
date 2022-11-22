@@ -254,11 +254,11 @@ func SelefraMetadata() string {
 	return "selefra_metadata"
 }
 
-func GetCacheKey(required *ProviderRequired, cli Config) string {
-	return GetSchemaKey(required, cli) + "_cache"
+func GetCacheKey() string {
+	return "update_time"
 }
 
-func GetSchemaKey(required *ProviderRequired, cfg Config) string {
+func GetSchemaKey(required *ProviderRequired) string {
 	var pre string
 	if required == nil {
 		return pre + "public"

@@ -119,9 +119,9 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 	return nil
 }
 
-func GetStoreValue(cof config.SelefraConfig, key string) (string, error) {
+func GetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, key string) (string, error) {
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	storageOpt.SearchPath = config.SelefraMetadata()
+	storageOpt.SearchPath = config.GetSchemaKey(provider)
 	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
 	if diag != nil && diag.HasError() {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
@@ -141,9 +141,9 @@ func GetStoreValue(cof config.SelefraConfig, key string) (string, error) {
 	return t, nil
 }
 
-func SetStoreValue(cof config.SelefraConfig, key, value string) error {
+func SetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, key, value string) error {
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	storageOpt.SearchPath = config.SelefraMetadata()
+	storageOpt.SearchPath = config.GetSchemaKey(provider)
 	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
 	if diag != nil && diag.HasError() {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
@@ -165,8 +165,8 @@ func SetStoreValue(cof config.SelefraConfig, key, value string) error {
 }
 
 func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
-	requireKey := config.GetCacheKey(&required, cof.Selefra)
-	t, err := GetStoreValue(cof, requireKey)
+	requireKey := config.GetCacheKey()
+	t, err := GetStoreValue(cof, &required, requireKey)
 	if err != nil {
 		return true, err
 	}
