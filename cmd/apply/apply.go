@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -242,10 +241,6 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				ui.PrintErrorLn(err.Error())
 				return err
 			}
-			ResourceAccountId, _ := fmtTemplate(fmt.Sprint(rule.Labels["resource_account_id"]), outMap)
-			ResourceId, _ := fmtTemplate(fmt.Sprint(rule.Labels["resource_id"]), outMap)
-			ResourceRegion, _ := fmtTemplate(fmt.Sprint(rule.Labels["resource_region"]), outMap)
-			ResourceType, _ := fmtTemplate(fmt.Sprint(rule.Labels["resource_type"]), outMap)
 			var remediation string
 			var remediationPath string
 			if filepath.IsAbs(rule.Metadata.Remediation) {
@@ -259,18 +254,14 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 				remediation = err.Error()
 			}
 			outMetaData = append(outMetaData, httpClient.Metadata{
-				Id:                rule.Metadata.Id,
-				Severity:          rule.Metadata.Severity,
-				ResourceType:      ResourceType,
-				Remediation:       remediation,
-				Provider:          rule.Metadata.Provider,
-				ResourceAccountId: ResourceAccountId,
-				ResourceId:        ResourceId,
-				ResourceRegion:    ResourceRegion,
-				Title:             rule.Metadata.Title,
-				Author:            rule.Metadata.Author,
-				Description:       desc,
-				Output:            outByte.String(),
+				Id:          rule.Metadata.Id,
+				Severity:    rule.Metadata.Severity,
+				Remediation: remediation,
+				Provider:    rule.Metadata.Provider,
+				Title:       rule.Metadata.Title,
+				Author:      rule.Metadata.Author,
+				Description: desc,
+				Output:      outByte.String(),
 			})
 			ui.PrintSuccessLn("	" + out)
 		}

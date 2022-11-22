@@ -533,7 +533,14 @@ func getAllModules(configMap map[string]string, workspace, path string) {
 		waitUsePath = strings.Replace(path, "selefra", modulePath, 1)
 		workspace = modulePath + "/" + modulesName
 	} else if strings.Index(path, "://") > -1 {
-		return
+		modulesArr := strings.Split(path, "://")
+		modulesName := strings.Split(modulesArr[1], "/")[1]
+		modulePath, err := utils.GetHomeModulesPath(modulesName)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+		}
+		waitUsePath = strings.Replace(path, strings.Join(modulesArr[:2], "://"), modulePath, 1)
+		workspace = modulePath + "/" + modulesName
 	} else {
 		waitUsePath = filepath.Join(workspace, path)
 		if workspace == "" {
@@ -657,6 +664,15 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 						return nil, err
 					}
 					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, "selefra", modules, 1)
+				}
+				if strings.Index(use, "://") > -1 {
+					modulesArr := strings.Split(use, "://")
+					modulesName := strings.Split(modulesArr[1], "/")[1]
+					modulePath, err := utils.GetHomeModulesPath(modulesName)
+					if err != nil {
+						ui.PrintErrorLn(err.Error())
+					}
+					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, strings.Join(modulesArr[:2], "://"), modulePath, 1)
 				}
 			}
 			for _, use := range moduleConfig.Modules[i].Uses {
