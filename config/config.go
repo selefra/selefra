@@ -86,17 +86,14 @@ type Rule struct {
 	Query    string                            `yaml:"query" json:"query"`
 	Labels   map[string]interface{}            `yaml:"labels" json:"labels"`
 	Metadata struct {
-		Id                string `yaml:"id" json:"id"`
-		Severity          string `yaml:"severity" json:"severity"`
-		Provider          string `yaml:"provider" json:"provider"`
-		ResourceType      string `yaml:"resource_type" json:"resource_type"`
-		ResourceAccountId string `yaml:"resource_account_id" json:"resource_account_id"`
-		ResourceId        string `yaml:"resource_id" json:"resource_id"`
-		ResourceRegion    string `yaml:"resource_region" json:"resource_region"`
-		Summary           string `yaml:"summary" json:"summary"`
-		Remediation       string `yaml:"remediation" json:"remediation"`
-		Title             string `yaml:"title" json:"title"`
-		Description       string `yaml:"description" json:"description"`
+		Id          string   `yaml:"id" json:"id"`
+		Severity    string   `yaml:"severity" json:"severity"`
+		Provider    string   `yaml:"provider" json:"provider"`
+		Tags        []string `yaml:"tags" json:"tags"`
+		Author      string   `yaml:"author" json:"author"`
+		Remediation string   `yaml:"remediation" json:"remediation"`
+		Title       string   `yaml:"title" json:"title"`
+		Description string   `yaml:"description" json:"description"`
 	}
 	Output string `yaml:"output" json:"-"`
 }
@@ -115,6 +112,7 @@ type Module struct {
 type Cloud struct {
 	Project      string `yaml:"project" mapstructure:"project"`
 	Organization string `yaml:"organization" mapstructure:"organization"`
+	HostName     string `yaml:"hostname" mapstructure:"hostname"`
 }
 
 type Config struct {
@@ -202,6 +200,13 @@ func (c *Config) GetDSN() string {
 	}
 	DSN := "host=" + db.Host + " user=" + db.Username + " password=" + db.Password + " port=" + db.Port + " dbname=" + db.Database + " " + "sslmode=disable"
 	return DSN
+}
+
+func (c *Config) GetHostName() string {
+	if c.Cloud != nil && c.Cloud.HostName != "" {
+		return c.Cloud.HostName
+	}
+	return "main-api.selefra.io"
 }
 
 func (c *SelefraConfig) GetConfig() error {
@@ -896,12 +901,10 @@ func (c *SelefraConfig) TestConfigByNode() error {
 					ruleMetadataMap["id"] = nil
 					ruleMetadataMap["severity"] = nil
 					ruleMetadataMap["provider"] = nil
-					ruleMetadataMap["resource_type"] = nil
-					ruleMetadataMap["resource_account_id"] = nil
-					ruleMetadataMap["resource_id"] = nil
-					ruleMetadataMap["resource_region"] = nil
+					ruleMetadataMap["tags"] = new(yaml.Node)
 					ruleMetadataMap["remediation"] = nil
 					ruleMetadataMap["title"] = nil
+					ruleMetadataMap["author"] = nil
 					ruleMetadataMap["description"] = nil
 					err = checkNode(ruleMetadataMap, ruleMap["metadata"].Content, pathStr, yamlPath+"metadata:")
 					if err != nil {

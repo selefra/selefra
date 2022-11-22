@@ -2,7 +2,7 @@ package ws
 
 import (
 	"github.com/gorilla/websocket"
-	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/config"
 	"time"
 )
 
@@ -43,8 +43,14 @@ func (c connClient) Close() error {
 }
 
 func Init() {
+	var c config.SelefraConfig
+	err := c.GetConfig()
+	if err != nil {
+		return
+	}
+	hostname := c.Selefra.GetHostName()
 	di := websocket.Dialer{}
-	conn, _, err := di.Dial("wss://"+global.SERVER+"/cli/ws/log_stream", nil)
+	conn, _, err := di.Dial("wss://"+hostname+"/cli/ws/log_stream", nil)
 	if err != nil {
 		return
 	}

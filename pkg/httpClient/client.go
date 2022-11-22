@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/selefra/selefra/config"
 	"io"
 	"net/http"
 	"os"
-
-	"github.com/selefra/selefra/global"
 )
 
 type OutputReq struct {
@@ -28,6 +27,7 @@ type Metadata struct {
 	ResourceId        string `json:"resource_id"`
 	ResourceRegion    string `json:"resource_region"`
 	Remediation       string `yaml:"remediation" json:"remediation"`
+	Author            string `json:"author"`
 	Title             string `json:"title"`
 	Description       string `json:"description"`
 	Output            string `json:"output"`
@@ -81,12 +81,18 @@ type Data struct {
 }
 
 func CliHttpClient[T any](method, url string, info interface{}) (*Res[T], error) {
+	var c config.SelefraConfig
+	err := c.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	hostname := c.Selefra.GetHostName()
 	var client http.Client
 	bytesData, err := json.Marshal(info)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(method, "https://"+global.SERVER+url, bytes.NewReader(bytesData))
+	req, err := http.NewRequest(method, "https://"+hostname+url, bytes.NewReader(bytesData))
 	if err != nil {
 		return nil, err
 	}
