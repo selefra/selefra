@@ -181,10 +181,11 @@ func GetDsn(token string) (string, error) {
 	return res.Data.Dsn, nil
 }
 
-func OutPut(token, project string, req []OutputReq) error {
+func OutPut(token, project, taskUUID string, req []OutputReq) error {
 	var info = make(map[string]interface{})
 	info["data"] = req
 	info["token"] = token
+	info["task_uuid"] = taskUUID
 	info["project_name"] = project
 	res, err := CliHttpClient[OutputRes]("POST", "/cli/upload_issue", info)
 	if err != nil {
