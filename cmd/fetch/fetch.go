@@ -70,7 +70,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	schema := config.GetSchemaKey(p, cof.Selefra)
+	schema := config.GetSchemaKey(p)
 	storageOpt.SearchPath = schema
 	opt, err := json.Marshal(storageOpt)
 	if err != nil {
