@@ -50,7 +50,6 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 }
 
 func Apply(ctx context.Context) error {
-	ws.Init()
 	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
@@ -62,6 +61,7 @@ func Apply(ctx context.Context) error {
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
+	ws.Init()
 	token, err := utils.GetCredentialsToken()
 	var taskUUId string
 	if token != "" && s.Selefra.Cloud != nil && err == nil {
