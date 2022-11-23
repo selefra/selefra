@@ -1,6 +1,7 @@
 package logout
 
 import (
+	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/pkg/httpClient"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
@@ -20,6 +21,12 @@ func NewLogoutCmd() *cobra.Command {
 }
 
 func RunFunc(cmd *cobra.Command, args []string) error {
+	s := config.SelefraConfig{}
+	err := s.GetConfig()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
 	path, err := utils.GetCredentialsPath()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())

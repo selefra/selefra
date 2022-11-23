@@ -2,6 +2,7 @@ package login
 
 import (
 	"bufio"
+	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/httpClient"
 	"github.com/selefra/selefra/pkg/utils"
@@ -23,6 +24,12 @@ func NewLoginCmd() *cobra.Command {
 }
 
 func RunFunc(cmd *cobra.Command, args []string) error {
+	s := config.SelefraConfig{}
+	err := s.GetConfig()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		return err
+	}
 	var token string
 	if len(args) == 0 {
 		credentials, err := utils.GetCredentialsPath()
@@ -50,7 +57,7 @@ the following file for use by subsequent commands:
 	} else {
 		token = args[0]
 	}
-	err := CliLogin(token)
+	err = CliLogin(token)
 	if err != nil {
 		ui.PrintErrorLn("The token is invalid. Please execute selefra to log out or log in again")
 		return err
