@@ -63,6 +63,7 @@ func Apply(ctx context.Context) error {
 		return err
 	}
 	token, err := utils.GetCredentialsToken()
+	var taskUUId string
 	if token != "" && s.Selefra.Cloud != nil && err == nil {
 		if err != nil {
 			ui.PrintErrorLn("The token is invalid. Please execute selefra to log out or log in again")
@@ -82,6 +83,7 @@ func Apply(ctx context.Context) error {
 			if err != nil {
 				ui.PrintWarningLn(err.Error())
 			}
+			taskUUId = taskRes.Data.TaskUUID
 		}
 	}
 	uid, _ := uuid.NewUUID()
@@ -149,7 +151,7 @@ Loading Selefra analysis code ...
 
 		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
 		schema := config.GetSchemaKey(s.Selefra.Providers[i])
-		err = RunRules(ctx, c, project, mRules, schema)
+		err = RunRules(ctx, c, project, taskUUId, mRules, schema)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
@@ -180,7 +182,7 @@ func UploadWorkspace(project string) error {
 	return nil
 }
 
-func RunRules(ctx context.Context, c *client.Client, project string, rules []config.Rule, schema string) error {
+func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
 		var params = make(map[string]interface{})
@@ -291,7 +293,7 @@ func RunRules(ctx context.Context, c *client.Client, project string, rules []con
 		}
 	}
 	if global.LOGINTOKEN != "" {
-		err := httpClient.OutPut(global.LOGINTOKEN, project, outputReq)
+		err := httpClient.OutPut(global.LOGINTOKEN, project, taskUUId, outputReq)
 		if err != nil {
 			ui.PrintErrorLn(err)
 		}
