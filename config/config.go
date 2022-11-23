@@ -422,17 +422,12 @@ func fmtNodePath(nodes []*yaml.Node, path string, key string) {
 	}
 }
 
-var MoreClient = errors.New("There are multiple selefra configurations！")
 var NoClient = errors.New("There is no selefra configuration！")
 
 func GetClientStr() ([]byte, error) {
 	configMap, err := readAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(configMap[SELEFRA]) > 1 {
-		return nil, MoreClient
 	}
 
 	if len(configMap[SELEFRA]) == 0 {
@@ -984,6 +979,7 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	if err != nil {
 		return nil, err
 	}
+	global.SERVER = c.Selefra.GetHostName()
 	return config, nil
 }
 
