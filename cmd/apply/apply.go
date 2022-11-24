@@ -160,8 +160,11 @@ Loading Selefra analysis code ...
 	if token != "" && s.Selefra.Cloud != nil {
 		err = UploadWorkspace(project)
 		if err != nil {
-			err = httpClient.SetupStag(token, project, httpClient.Failed)
 			ui.PrintErrorLn(err.Error())
+			sErr := httpClient.SetupStag(token, project, httpClient.Failed)
+			if sErr != nil {
+				ui.PrintErrorLn(sErr.Error())
+			}
 			return nil
 		}
 	}
