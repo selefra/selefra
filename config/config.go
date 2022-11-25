@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/selefra/selefra/global"
@@ -32,6 +33,32 @@ var typeMap = map[string]bool{
 	MODULES:   true,
 	PROVIDERS: true,
 	RULES:     true,
+}
+
+type CliProviders struct {
+	Cache     string   `yaml:"cache" json:"cache"`
+	Resources []string `yaml:"resources" json:"resources"`
+}
+
+func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
+	var cp CliProviders
+	for _, group := range c.Providers.Content {
+		for i, node := range group.Content {
+			if node.Kind == yaml.ScalarNode && node.Value == "name" && group.Content[i+1].Value == name {
+				b, err := yaml.Marshal(group)
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					return cp, err
+				}
+				err = yaml.Unmarshal(b, &cp)
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					return cp, err
+				}
+			}
+		}
+	}
+	return cp, nil
 }
 
 type SelefraConfig struct {
@@ -59,17 +86,14 @@ type Rule struct {
 	Query    string                            `yaml:"query" json:"query"`
 	Labels   map[string]interface{}            `yaml:"labels" json:"labels"`
 	Metadata struct {
-		Id                string `yaml:"id" json:"id"`
-		Severity          string `yaml:"severity" json:"severity"`
-		Provider          string `yaml:"provider" json:"provider"`
-		ResourceType      string `yaml:"resource_type" json:"resource_type"`
-		ResourceAccountId string `yaml:"resource_account_id" json:"resource_account_id"`
-		ResourceId        string `yaml:"resource_id" json:"resource_id"`
-		ResourceRegion    string `yaml:"resource_region" json:"resource_region"`
-		Summary           string `yaml:"summary" json:"summary"`
-		Remediation       string `yaml:"remediation" json:"remediation"`
-		Title             string `yaml:"title" json:"title"`
-		Description       string `yaml:"description" json:"description"`
+		Id          string   `yaml:"id" json:"id"`
+		Severity    string   `yaml:"severity" json:"severity"`
+		Provider    string   `yaml:"provider" json:"provider"`
+		Tags        []string `yaml:"tags" json:"tags"`
+		Author      string   `yaml:"author" json:"author"`
+		Remediation string   `yaml:"remediation" json:"remediation"`
+		Title       string   `yaml:"title" json:"title"`
+		Description string   `yaml:"description" json:"description"`
 	}
 	Output string `yaml:"output" json:"-"`
 }
@@ -88,6 +112,7 @@ type Module struct {
 type Cloud struct {
 	Project      string `yaml:"project" mapstructure:"project"`
 	Organization string `yaml:"organization" mapstructure:"organization"`
+	HostName     string `yaml:"hostname" mapstructure:"hostname"`
 }
 
 type Config struct {
@@ -112,11 +137,10 @@ type ConfigInitWithLogin struct {
 }
 
 type ProviderRequired struct {
-	Name      string   `yaml:"name,omitempty" json:"name,omitempty"`
-	Source    *string  `yaml:"source,omitempty" json:"source,omitempty"`
-	Version   string   `yaml:"version,omitempty" json:"version,omitempty"`
-	Path      string   `yaml:"path" json:"path"`
-	Resources []string `yaml:"resources" json:"resources"`
+	Name    string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Source  *string `yaml:"source,omitempty" json:"source,omitempty"`
+	Version string  `yaml:"version,omitempty" json:"version,omitempty"`
+	Path    string  `yaml:"path" json:"path"`
 }
 
 type ProviderRequiredInit struct {
@@ -145,7 +169,6 @@ type FileMap map[string]string
 
 func (c *Config) GetDSN() string {
 	var db *DB
-
 	token, err := utils.GetCredentialsToken()
 	if token != "" && c.Cloud != nil && err == nil {
 		DSN, err := httpClient.GetDsn(token)
@@ -179,6 +202,13 @@ func (c *Config) GetDSN() string {
 	return DSN
 }
 
+func (c *Config) GetHostName() string {
+	if c.Cloud != nil && c.Cloud.HostName != "" {
+		return c.Cloud.HostName
+	}
+	return "main-api.selefra.io"
+}
+
 func (c *SelefraConfig) GetConfig() error {
 	_, err := c.GetConfigWithViper()
 	return err
@@ -210,6 +240,35 @@ func GetAllConfig(dirname string, fileMap FileMap) (FileMap, error) {
 		}
 	}
 	return fileMap, nil
+}
+
+func ReplaceStringByRegex(str, rule, replace string) (string, error) {
+	reg, err := regexp.Compile(rule)
+	if reg == nil || err != nil {
+		return "", errors.New("正则MustCompile错误:" + err.Error())
+	}
+	return reg.ReplaceAllString(str, replace), nil
+}
+
+func SelefraMetadata() string {
+	return "selefra_metadata"
+}
+
+func GetCacheKey() string {
+	return "update_time"
+}
+
+func GetSchemaKey(required *ProviderRequired) string {
+	var pre string
+	if required == nil {
+		return pre + "public"
+	}
+	sourceArr := strings.Split(*required.Source, "/")
+	source := strings.Replace(sourceArr[1], "/", "_", -1)
+	source = strings.Replace(source, "@", "_", -1)
+	source = strings.Replace(source, ".", "", -1)
+	s := source + "_" + required.Name
+	return pre + s
 }
 
 func IsSelefra() error {
@@ -363,17 +422,12 @@ func fmtNodePath(nodes []*yaml.Node, path string, key string) {
 	}
 }
 
-var MoreClient = errors.New("There are multiple selefra configurations！")
 var NoClient = errors.New("There is no selefra configuration！")
 
 func GetClientStr() ([]byte, error) {
 	configMap, err := readAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(configMap[SELEFRA]) > 1 {
-		return nil, MoreClient
 	}
 
 	if len(configMap[SELEFRA]) == 0 {
@@ -467,14 +521,22 @@ func getAllModules(configMap map[string]string, workspace, path string) {
 	var waitUsePath string
 	if strings.HasPrefix(path, "selefra/") {
 		modulesName := strings.Split(path, "/")[1]
-		modulePath, err := utils.GetHomeModulesPath(modulesName)
+		modulePath, err := utils.GetHomeModulesPath(modulesName, "")
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 		}
 		waitUsePath = strings.Replace(path, "selefra", modulePath, 1)
 		workspace = modulePath + "/" + modulesName
-	} else if strings.Index(path, "://") > -1 {
-		return
+	} else if strings.HasPrefix(path, "app.selefra.io") {
+		modulesArr := strings.Split(path, "/")
+		modulesOrg := modulesArr[1]
+		modulesName := modulesArr[2]
+		modulePath, err := utils.GetHomeModulesPath(modulesName, modulesOrg)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+		}
+		waitUsePath = strings.Replace(path, strings.Join(modulesArr[:2], "/"), modulePath, 1)
+		workspace = modulePath + "/" + modulesName
 	} else {
 		waitUsePath = filepath.Join(workspace, path)
 		if workspace == "" {
@@ -593,11 +655,21 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 			for ii, use := range moduleConfig.Modules[i].Uses {
 				if strings.HasPrefix(use, "selefra") {
 					modulesName := strings.Split(use, "/")[1]
-					modules, err := utils.GetHomeModulesPath(modulesName)
+					modules, err := utils.GetHomeModulesPath(modulesName, "")
 					if err != nil {
 						return nil, err
 					}
 					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, "selefra", modules, 1)
+				}
+				if strings.HasPrefix(use, "app.selefra.io") {
+					modulesArr := strings.Split(use, "/")
+					modulesOrg := modulesArr[1]
+					modulesName := modulesArr[2]
+					modulePath, err := utils.GetHomeModulesPath(modulesName, modulesOrg)
+					if err != nil {
+						ui.PrintErrorLn(err.Error())
+					}
+					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, strings.Join(modulesArr[:2], "/"), modulePath, 1)
 				}
 			}
 			for _, use := range moduleConfig.Modules[i].Uses {
@@ -630,7 +702,7 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 			return nil, err
 		}
 		for i := range tempModules.Modules {
-			resultModules = append(resultModules, deepFmtModules(&tempModules.Modules[i])...)
+			resultModules = append(resultModules, deepFmtModules(&tempModules.Modules[i], usedModuleMap)...)
 		}
 	}
 
@@ -639,8 +711,14 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 	return yaml.Marshal(resultM)
 }
 
-func deepFmtModules(module *Module) []Module {
+func deepFmtModules(module *Module, usedModuleMap map[string]bool) []Module {
 	var output []Module
+	for i := 0; i < len(module.Uses); i++ {
+		if usedModuleMap[module.Uses[i]] {
+			module.Uses = append(module.Uses[:i], module.Uses[i+1:]...)
+			i--
+		}
+	}
 	if len(module.Children) != 0 {
 		for i := range module.Children {
 			for i2 := range module.Children[i].Modules {
@@ -649,14 +727,12 @@ func deepFmtModules(module *Module) []Module {
 					module.Children[i].Modules[i2].Input[key] = value
 				}
 			}
-			for i := range module.Children[i].Modules {
-				output = append(output, deepFmtModules(&module.Children[i].Modules[i])...)
+			for i3 := range module.Children[i].Modules {
+				output = append(output, deepFmtModules(&module.Children[i].Modules[i3], usedModuleMap)...)
 			}
 		}
-
-	} else {
-		output = append(output, *module)
 	}
+	output = append(output, *module)
 	return output
 }
 
@@ -770,7 +846,6 @@ func (c *SelefraConfig) TestConfigByNode() error {
 			providersMap["source"] = nil
 			providersMap["version"] = nil
 			providersMap["path"] = new(yaml.Node)
-			providersMap["resources"] = new(yaml.Node)
 			yamlPath := fmt.Sprintf("selefra.providers[%d]:", index)
 			err = checkNode(providersMap, node.Content, pathStr, yamlPath)
 			if err != nil {
@@ -843,12 +918,10 @@ func (c *SelefraConfig) TestConfigByNode() error {
 					ruleMetadataMap["id"] = nil
 					ruleMetadataMap["severity"] = nil
 					ruleMetadataMap["provider"] = nil
-					ruleMetadataMap["resource_type"] = nil
-					ruleMetadataMap["resource_account_id"] = nil
-					ruleMetadataMap["resource_id"] = nil
-					ruleMetadataMap["resource_region"] = nil
+					ruleMetadataMap["tags"] = new(yaml.Node)
 					ruleMetadataMap["remediation"] = nil
 					ruleMetadataMap["title"] = nil
+					ruleMetadataMap["author"] = nil
 					ruleMetadataMap["description"] = nil
 					err = checkNode(ruleMetadataMap, ruleMap["metadata"].Content, pathStr, yamlPath+"metadata:")
 					if err != nil {
@@ -912,9 +985,7 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return config, err
-	}
+	global.SERVER = c.Selefra.GetHostName()
 	return config, nil
 }
 

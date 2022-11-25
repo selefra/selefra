@@ -11,6 +11,7 @@ import (
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
 	"path/filepath"
+	"time"
 )
 
 func Sync() (errLogs []string, err error) {
@@ -63,14 +64,24 @@ func Sync() (errLogs []string, err error) {
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
+		need, _ := tools.NeedFetch(*p, *cof)
+		if !need {
+			continue
+		}
 		err = fetch.Fetch(ctx, cof, p)
 		if err != nil {
 			ui.PrintErrorF("%s %s Synchronization failed：%s", p.Name, p.Version, err.Error())
 			hasError = true
 			continue
 		}
+		requireKey := config.GetCacheKey()
+		err = tools.SetStoreValue(*cof, p, requireKey, time.Now().Format(time.RFC3339))
+		if err != nil {
+			ui.PrintWarningF("%s %s set cache time failed：%s", p.Name, p.Version, err.Error())
+			hasError = true
+			continue
+		}
 	}
-
 	if hasError {
 		ui.PrintErrorF(`
 This may be exception, view detailed exception in %s .

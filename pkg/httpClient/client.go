@@ -19,17 +19,15 @@ type OutputReq struct {
 }
 
 type Metadata struct {
-	Id                string `json:"id"`
-	Severity          string `json:"severity"`
-	Provider          string `json:"provider"`
-	ResourceType      string `json:"resource_type"`
-	ResourceAccountId string `json:"resource_account_id"`
-	ResourceId        string `json:"resource_id"`
-	ResourceRegion    string `json:"resource_region"`
-	Remediation       string `yaml:"remediation" json:"remediation"`
-	Title             string `json:"title"`
-	Description       string `json:"description"`
-	Output            string `json:"output"`
+	Id          string   `json:"id"`
+	Severity    string   `json:"severity"`
+	Provider    string   `json:"provider"`
+	Tags        []string `json:"tags"`
+	Remediation string   `yaml:"remediation" json:"remediation"`
+	Author      string   `json:"author"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Output      string   `json:"output"`
 }
 
 type OutputRes struct {
@@ -47,7 +45,6 @@ type Res[T any] struct {
 type CreateProjectData struct {
 	Name    string `json:"name"`
 	OrgName string `json:"org_name"`
-	TaskId  uint   `json:"task_id"`
 }
 
 type loginData struct {
@@ -59,6 +56,7 @@ type loginData struct {
 type TaskData struct {
 	TaskUUID string `json:"task_uuid"`
 }
+
 type logoutData struct {
 }
 
@@ -124,11 +122,11 @@ func Login(token string) (*Res[loginData], error) {
 	return res, nil
 }
 
-func CreateTask(token, project_name string, task_id uint) (*Res[TaskData], error) {
+func CreateTask(token, project_name string) (*Res[TaskData], error) {
 	var info = make(map[string]interface{})
 	info["token"] = token
 	info["project_name"] = project_name
-	info["task_id"] = task_id
+	info["task_id"] = os.Getenv("SELEFRA_TASK_ID")
 	info["task_source"] = os.Getenv("SELEFRA_TASK_SOURCE")
 	res, err := CliHttpClient[TaskData]("POST", "/cli/create_task", info)
 	if err != nil {
@@ -153,19 +151,20 @@ func Logout(token string) error {
 	return nil
 }
 
-func CreateProject(token, name string) (orgName string, taskId uint, err error) {
+func CreateProject(token, name string) (orgName string, err error) {
 	var info = make(map[string]string)
 	info["token"] = token
 	info["name"] = name
 	res, err := CliHttpClient[CreateProjectData]("POST", "/cli/create_project", info)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 	if res.Code != 0 {
-		return "", 0, fmt.Errorf(res.Msg)
+		return "", fmt.Errorf(res.Msg)
 	}
-	return res.Data.OrgName, res.Data.TaskId, nil
+	return res.Data.OrgName, nil
 }
+
 func GetDsn(token string) (string, error) {
 	var info = make(map[string]string)
 	info["token"] = token
@@ -179,10 +178,11 @@ func GetDsn(token string) (string, error) {
 	return res.Data.Dsn, nil
 }
 
-func OutPut(token, project string, req []OutputReq) error {
+func OutPut(token, project, taskUUID string, req []OutputReq) error {
 	var info = make(map[string]interface{})
 	info["data"] = req
 	info["token"] = token
+	info["task_uuid"] = taskUUID
 	info["project_name"] = project
 	res, err := CliHttpClient[OutputRes]("POST", "/cli/upload_issue", info)
 	if err != nil {
@@ -218,7 +218,9 @@ func UploadWorkplace(token, project string, fileMap map[string]string) error {
 }
 
 const Creating = "creating"
+
 const Testing = "testing"
+
 const Failed = "failed"
 
 func SetupStag(token, project, stag string) error {

@@ -4,26 +4,32 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
+
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/logger"
 	"github.com/selefra/selefra/pkg/ws"
-	"runtime"
-	"time"
 )
 
-var defaultLogger *logger.Logger
+var defaultLogger, _ = logger.NewLogger(logger.Config{
+	FileLogEnabled:    true,
+	ConsoleLogEnabled: false,
+	EncodeLogsAsJson:  true,
+	ConsoleNoColor:    true,
+	Source:            "client",
+	Directory:         "logs",
+	Level:             "info",
+})
 
-const (
-	prefixManaged   = "managed"
-	prefixUnmanaged = "unmanaged"
-	defaultAlias    = "default"
-)
-
-func InitLogger() {
-	defaultLogger, _ = logger.NewLogger(logger.Config{
+func StoLogger() (*logger.StoLogger, error) {
+	return logger.NewStoLogger(logger.Config{
 		FileLogEnabled:    true,
 		ConsoleLogEnabled: false,
 		EncodeLogsAsJson:  true,
@@ -33,6 +39,32 @@ func InitLogger() {
 		Level:             "info",
 	})
 }
+
+var wsLogger *os.File
+
+func init() {
+	flag := strings.ToLower(os.Getenv("SELEFRA_CLOUD_FLAG"))
+	if flag == "true" || flag == "enable" {
+		_, err := os.Stat("ws.log")
+		if err != nil {
+			if !os.IsNotExist(err) {
+				panic("Unknown error," + err.Error())
+			}
+			wsLogger, err = os.Create("ws.log")
+		} else {
+			wsLogger, err = os.OpenFile("ws.log", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+		}
+		if err != nil {
+			panic("ws log file open error," + err.Error())
+		}
+	}
+}
+
+const (
+	prefixManaged   = "managed"
+	prefixUnmanaged = "unmanaged"
+	defaultAlias    = "default"
+)
 
 var (
 	ErrorColor   = color.New(color.FgRed, color.Bold)
@@ -64,7 +96,6 @@ func createLog(msg string, c *color.Color) string {
 	case BaseColor:
 		level = "base"
 	default:
-		level = "info"
 	}
 	l := LogJOSN{
 		Cmd:   global.CMD,
@@ -77,11 +108,14 @@ func createLog(msg string, c *color.Color) string {
 	if err != nil {
 		return ""
 	}
-	return string(b)
+	sb := string(b)
+	if wsLogger != nil {
+		_, _ = wsLogger.WriteString(sb + "\n")
+	}
+	return sb
 }
 
 func PrintErrorF(format string, a ...interface{}) {
-	InitLogger()
 	_, f, l, ok := runtime.Caller(1)
 	if ok {
 		if defaultLogger != nil {
@@ -92,7 +126,6 @@ func PrintErrorF(format string, a ...interface{}) {
 }
 
 func PrintWarningF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Warn, format, a...)
 	}
@@ -101,7 +134,6 @@ func PrintWarningF(format string, a ...interface{}) {
 }
 
 func PrintSuccessF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, format, a...)
 	}
@@ -110,7 +142,6 @@ func PrintSuccessF(format string, a ...interface{}) {
 }
 
 func PrintInfoF(format string, a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, format, a...)
 	}
@@ -118,7 +149,6 @@ func PrintInfoF(format string, a ...interface{}) {
 }
 
 func PrintErrorLn(a ...interface{}) {
-	InitLogger()
 	_, f, l, ok := runtime.Caller(1)
 	if ok {
 		if defaultLogger != nil {
@@ -129,7 +159,6 @@ func PrintErrorLn(a ...interface{}) {
 }
 
 func PrintWarningLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Warn, fmt.Sprintln(a...))
 	}
@@ -138,16 +167,13 @@ func PrintWarningLn(a ...interface{}) {
 }
 
 func PrintSuccessLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, fmt.Sprintln(a...))
 	}
 	PrintCustomizeLn(SuccessColor, a...)
-
 }
 
 func PrintInfoLn(a ...interface{}) {
-	InitLogger()
 	if defaultLogger != nil {
 		defaultLogger.Log(hclog.Info, fmt.Sprintln(a...))
 	}
@@ -172,8 +198,8 @@ func PrintCustomizeLn(c *color.Color, a ...interface{}) {
 func PrintCustomizeLnNotShow(a ...interface{}) {
 	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
 }
+
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
-	InitLogger()
 	var err error
 	for i := range diagnostics {
 		switch diagnostics[i].Level() {
@@ -211,7 +237,6 @@ func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
 }
 
 func PrintDiagnostic(diagnostics []*schema.Diagnostic) error {
-	InitLogger()
 	var err error
 	for i := range diagnostics {
 		switch diagnostics[i].Level() {

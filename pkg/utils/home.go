@@ -49,13 +49,13 @@ func Home() (string, string, error) {
 	return registryPath, config, nil
 }
 
-func GetHomeModulesPath(modules string) (string, error) {
+func GetHomeModulesPath(modules string, org string) (string, error) {
 	path, _, err := Home()
 	if err != nil {
 		return "", err
 	}
 	modulesPath := filepath.Join(path, "download/modules")
-	err = ModulesUpdate(modules, modulesPath)
+	err = ModulesUpdate(modules, modulesPath, org)
 	if err != nil {
 		return "", err
 	}
@@ -227,7 +227,7 @@ func getModulesModulesSupplement(ctx context.Context, modulesName, version strin
 
 var LatestVersion string
 
-func ModulesUpdate(modulesName string, modulesPath string) error {
+func ModulesUpdate(modulesName string, modulesPath string, org string) error {
 	_, config, err := Home()
 	if err != nil {
 		return err
@@ -241,42 +241,60 @@ func ModulesUpdate(modulesName string, modulesPath string) error {
 	if err != nil {
 		return err
 	}
-	if LatestVersion == "" {
-		metadata, err := getModulesMetadata(context.Background(), modulesName)
+
+	if org != "" {
+		url := "https://" + global.SERVER + "/cli/download/" + org + "/" + global.LOGINTOKEN + "/" + modulesName + ".zip"
+		_, err := os.Stat(filepath.Join(modulesPath, modulesName))
+		if err == nil {
+			err = os.RemoveAll(filepath.Join(modulesPath, modulesName))
+			if err != nil {
+				return err
+			}
+		}
+		err = modules.DownloadModule(url, filepath.Join(modulesPath, modulesName))
 		if err != nil {
 			return err
 		}
-		LatestVersion = metadata.LatestVersion
-	}
-	if err != nil {
-		return err
-	}
-	if configMap["modules"+"/"+modulesName] == LatestVersion {
 		return nil
 	} else {
-		supplement, err := getModulesModulesSupplement(context.Background(), modulesName, LatestVersion)
+		if LatestVersion == "" {
+			metadata, err := getModulesMetadata(context.Background(), modulesName)
+			if err != nil {
+				return err
+			}
+			LatestVersion = metadata.LatestVersion
+		}
 		if err != nil {
 			return err
 		}
-		url := supplement.Source + "/releases/download/" + LatestVersion + "/" + modulesName + ".zip"
-		err = os.RemoveAll(filepath.Join(modulesPath, modulesName))
-		if err != nil {
-			return err
+		_, e := os.Stat(filepath.Join(modulesPath, modulesName))
+		if configMap["modules"+"/"+modulesName] == LatestVersion && e == nil {
+			return nil
+		} else {
+			supplement, err := getModulesModulesSupplement(context.Background(), modulesName, LatestVersion)
+			if err != nil {
+				return err
+			}
+			url := supplement.Source + "/releases/download/" + LatestVersion + "/" + modulesName + ".zip"
+			err = os.RemoveAll(filepath.Join(modulesPath, modulesName))
+			if err != nil {
+				return err
+			}
+			err = modules.DownloadModule(url, modulesPath)
+			if err != nil {
+				return err
+			}
+			configMap["modules"+"/"+modulesName] = LatestVersion
+			c, err := json.Marshal(configMap)
+			if err != nil {
+				return err
+			}
+			err = os.Remove(config)
+			if err != nil {
+				return err
+			}
+			err = os.WriteFile(config, c, 0644)
 		}
-		err = modules.DownloadModule(url, modulesPath)
-		if err != nil {
-			return err
-		}
-		configMap["modules"+"/"+modulesName] = LatestVersion
-		c, err := json.Marshal(configMap)
-		if err != nil {
-			return err
-		}
-		err = os.Remove(config)
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile(config, c, 0644)
 	}
 	return nil
 }

@@ -2,30 +2,28 @@ package init
 
 const ruleComment = `
 rules:
-  - name: ebs_volume_are_unencrypted
+  - name: example_rule_name
     query: |
       SELECT 
         *
       FROM 
         aws_ec2_ebs_volumes 
       WHERE 
-        encrypted = FALSE
-    labels:
-      tag:
-        - Security
-        - Misconfigure
-      author: Selefra
-      standard: Custom
-    metadata:
-      id: SF010302
-      severity: Low
-      provider: AWS
-      resource_type: EC2
+        encrypted = FALSE;
+    labels:  
+      resource_type: EC2 
       resource_account_id : '{{.account_id}}'
       resource_id: '{{.id}}'
       resource_region: '{{.availability_zone}}'
-      remediation: remediation/ebs_volume_are_unencrypted.md
-      title: EBS volume are unencrypted
+    metadata: 
+      id: SF010302
+      severity: Low
+      provider: AWS
+      tags:
+        - Misconfigure
+      author: Selefra
+      remediation: remediation/ec2/ebs_volume_are_unencrypted.md
+      title: EBS volume are unencrypted 
       description: Ensure that EBS volumes are encrypted.
     output: 'EBS volume are unencrypted, EBS id: {{.id}}, availability zone: {{.availability_zone}}'
 `
