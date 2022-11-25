@@ -251,7 +251,7 @@ func ModulesUpdate(modulesName string, modulesPath string, org string) error {
 				return err
 			}
 		}
-		err = modules.DownloadModule(url, modulesPath)
+		err = modules.DownloadModule(url, filepath.Join(modulesPath, modulesName))
 		if err != nil {
 			return err
 		}

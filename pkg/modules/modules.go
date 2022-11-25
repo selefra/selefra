@@ -7,6 +7,6 @@ import (
 
 func DownloadModule(usePath string, modulesPath string) error {
 	ctx := context.Background()
-	err := getter.Get(ctx, modulesPath, usePath)
+	err := getter.ModuleGet(ctx, modulesPath, usePath)
 	return err
 }
