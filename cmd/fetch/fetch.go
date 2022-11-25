@@ -177,7 +177,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
 		}
 	}
-
+	progbar.Wait(p.Name + "@" + p.Version)
 	ui.PrintSuccessF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
 	return nil
 }

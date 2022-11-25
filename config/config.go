@@ -521,20 +521,21 @@ func getAllModules(configMap map[string]string, workspace, path string) {
 	var waitUsePath string
 	if strings.HasPrefix(path, "selefra/") {
 		modulesName := strings.Split(path, "/")[1]
-		modulePath, err := utils.GetHomeModulesPath(modulesName)
+		modulePath, err := utils.GetHomeModulesPath(modulesName, "")
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 		}
 		waitUsePath = strings.Replace(path, "selefra", modulePath, 1)
 		workspace = modulePath + "/" + modulesName
-	} else if strings.Index(path, "://") > -1 {
-		modulesArr := strings.Split(path, "://")
-		modulesName := strings.Split(modulesArr[1], "/")[1]
-		modulePath, err := utils.GetHomeModulesPath(modulesName)
+	} else if strings.HasPrefix(path, "app.selefra.io") {
+		modulesArr := strings.Split(path, "/")
+		modulesOrg := modulesArr[1]
+		modulesName := modulesArr[2]
+		modulePath, err := utils.GetHomeModulesPath(modulesName, modulesOrg)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 		}
-		waitUsePath = strings.Replace(path, strings.Join(modulesArr[:2], "://"), modulePath, 1)
+		waitUsePath = strings.Replace(path, strings.Join(modulesArr[:2], "/"), modulePath, 1)
 		workspace = modulePath + "/" + modulesName
 	} else {
 		waitUsePath = filepath.Join(workspace, path)
@@ -654,20 +655,21 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 			for ii, use := range moduleConfig.Modules[i].Uses {
 				if strings.HasPrefix(use, "selefra") {
 					modulesName := strings.Split(use, "/")[1]
-					modules, err := utils.GetHomeModulesPath(modulesName)
+					modules, err := utils.GetHomeModulesPath(modulesName, "")
 					if err != nil {
 						return nil, err
 					}
 					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, "selefra", modules, 1)
 				}
-				if strings.Index(use, "://") > -1 {
-					modulesArr := strings.Split(use, "://")
-					modulesName := strings.Split(modulesArr[1], "/")[1]
-					modulePath, err := utils.GetHomeModulesPath(modulesName)
+				if strings.HasPrefix(use, "app.selefra.io") {
+					modulesArr := strings.Split(use, "/")
+					modulesOrg := modulesArr[1]
+					modulesName := modulesArr[2]
+					modulePath, err := utils.GetHomeModulesPath(modulesName, modulesOrg)
 					if err != nil {
 						ui.PrintErrorLn(err.Error())
 					}
-					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, strings.Join(modulesArr[:2], "://"), modulePath, 1)
+					moduleConfig.Modules[i].Uses[ii] = strings.Replace(use, strings.Join(modulesArr[:2], "/"), modulePath, 1)
 				}
 			}
 			for _, use := range moduleConfig.Modules[i].Uses {
@@ -700,7 +702,7 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 			return nil, err
 		}
 		for i := range tempModules.Modules {
-			resultModules = append(resultModules, deepFmtModules(&tempModules.Modules[i])...)
+			resultModules = append(resultModules, deepFmtModules(&tempModules.Modules[i], usedModuleMap)...)
 		}
 	}
 
@@ -709,8 +711,14 @@ func makeUsesModule(nodesMap map[string]*yaml.Node) ([]byte, error) {
 	return yaml.Marshal(resultM)
 }
 
-func deepFmtModules(module *Module) []Module {
+func deepFmtModules(module *Module, usedModuleMap map[string]bool) []Module {
 	var output []Module
+	for i := 0; i < len(module.Uses); i++ {
+		if usedModuleMap[module.Uses[i]] {
+			module.Uses = append(module.Uses[:i], module.Uses[i+1:]...)
+			i--
+		}
+	}
 	if len(module.Children) != 0 {
 		for i := range module.Children {
 			for i2 := range module.Children[i].Modules {
@@ -719,14 +727,12 @@ func deepFmtModules(module *Module) []Module {
 					module.Children[i].Modules[i2].Input[key] = value
 				}
 			}
-			for i := range module.Children[i].Modules {
-				output = append(output, deepFmtModules(&module.Children[i].Modules[i])...)
+			for i3 := range module.Children[i].Modules {
+				output = append(output, deepFmtModules(&module.Children[i].Modules[i3], usedModuleMap)...)
 			}
 		}
-
-	} else {
-		output = append(output, *module)
 	}
+	output = append(output, *module)
 	return output
 }
 

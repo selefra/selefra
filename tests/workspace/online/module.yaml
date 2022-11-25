@@ -2,4 +2,5 @@ modules:
   - name: AWS_Security_Demo
     uses:
     - selefra/rules-aws-misconfigure-s3/module.yaml
+    - app.selefra.io/mnm/rules-aws-cis-benchmark/module.yaml
     - ./rules/iam_mfa.yaml

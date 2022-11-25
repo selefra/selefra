@@ -2,6 +2,7 @@ selefra:
     cloud:
         project: testProject
         organization: cliOnlie
+        hostname: dev-api.selefra.io
     name: testProject
     cli_version: '{{version}}'
     providers:
