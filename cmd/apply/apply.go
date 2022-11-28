@@ -151,7 +151,7 @@ Loading Selefra analysis code ...
 
 		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
 		schema := config.GetSchemaKey(s.Selefra.Providers[i])
-		err = RunRules(ctx, c, project, taskUUId, mRules, schema)
+		err = RunRules(ctx, s, c, project, taskUUId, mRules, schema)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
@@ -185,18 +185,14 @@ func UploadWorkspace(project string) error {
 	return nil
 }
 
-func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
+func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
-		var params = make(map[string]interface{})
-		for key, input := range rule.Input {
-			params[key] = input["default"]
-		}
 		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
 		ui.PrintSuccessLn("Schema:")
 		ui.PrintSuccessLn(schema + "\n")
 		ui.PrintSuccessLn("Description:")
-		desc, err := fmtTemplate(rule.Metadata.Description, params)
+		desc, err := fmtTemplate(rule.Metadata.Description, s.Variables)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -204,7 +200,7 @@ func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, r
 		ui.PrintSuccessLn("	" + desc)
 
 		ui.PrintSuccessLn("Policy:")
-		queryStr, err := fmtTemplate(rule.Query, params)
+		queryStr, err := fmtTemplate(rule.Query, s.Variables)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -395,16 +391,10 @@ func RunPathModule(module config.Module) *[]config.Rule {
 				}
 				ruleConfig.Rules[i].Query = string(sqlByte)
 			}
-			for key, input := range ruleConfig.Rules[i].Input {
-				if module.Input[key] != nil {
-					input["default"] = module.Input[key]
-				}
-			}
 			ui.PrintSuccessF("	%s - Rule %s: loading ... ", use, baseRule.Rules[i].Name)
 		}
 		resRule.Rules = append(resRule.Rules, ruleConfig.Rules...)
 	}
-
 	return &resRule.Rules
 }
 

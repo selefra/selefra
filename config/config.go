@@ -25,6 +25,8 @@ const MODULES = "modules"
 
 const PROVIDERS = "providers"
 
+const VARIABLES = "variables"
+
 const RULES = "rules"
 
 var typeMap = map[string]bool{
@@ -32,6 +34,7 @@ var typeMap = map[string]bool{
 	MODULES:   true,
 	PROVIDERS: true,
 	RULES:     true,
+	VARIABLES: true,
 }
 
 type CliProviders struct {
@@ -61,8 +64,9 @@ func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
 }
 
 type SelefraConfig struct {
-	Selefra   Config    `yaml:"selefra"`
-	Providers yaml.Node `yaml:"providers"`
+	Selefra   Config                 `yaml:"selefra"`
+	Providers yaml.Node              `yaml:"providers"`
+	Variables map[string]interface{} `yaml:"variables"`
 }
 type SelefraConfigInit struct {
 	Selefra   ConfigInit `yaml:"selefra"`
@@ -79,11 +83,10 @@ type RulesConfig struct {
 }
 
 type Rule struct {
-	Path     string                            `yaml:"path" json:"path"`
-	Name     string                            `yaml:"name" json:"name"`
-	Input    map[string]map[string]interface{} `yaml:"input" json:"-"`
-	Query    string                            `yaml:"query" json:"query"`
-	Labels   map[string]interface{}            `yaml:"labels" json:"labels"`
+	Path     string                 `yaml:"path" json:"path"`
+	Name     string                 `yaml:"name" json:"name"`
+	Query    string                 `yaml:"query" json:"query"`
+	Labels   map[string]interface{} `yaml:"labels" json:"labels"`
 	Metadata struct {
 		Id          string   `yaml:"id" json:"id"`
 		Severity    string   `yaml:"severity" json:"severity"`
@@ -102,10 +105,9 @@ type ModuleConfig struct {
 }
 
 type Module struct {
-	Name     string                 `yaml:"name" json:"name"`
-	Uses     []string               `yaml:"uses" json:"uses"`
-	Input    map[string]interface{} `yaml:"input" json:"input"`
-	Children []*ModuleConfig        `yaml:"-" json:"children"`
+	Name     string          `yaml:"name" json:"name"`
+	Uses     []string        `yaml:"uses" json:"uses"`
+	Children []*ModuleConfig `yaml:"-" json:"children"`
 }
 
 type Cloud struct {
@@ -323,38 +325,6 @@ func readConfigFile(dirname string, configMap ConfigMap, file os.FileInfo) (Conf
 					configMap[node.Content[0].Content[i].Value] = make(map[string]string)
 				}
 				configMap[node.Content[0].Content[i].Value][filepath.Join(dirname, file.Name())] = string(b)
-				//if node.Content[0].Content[i].Value == "modules" {
-				//	ModulesCount := node.Content[0].Content[i+1].Content[0].Content
-				//	for i, node := range ModulesCount {
-				//		if node.Value == "uses" {
-				//			for _, use := range ModulesCount[i+1].Content {
-				//				var p string
-				//				if filepath.IsAbs(use.Value) {
-				//					p = use.Value
-				//				}
-				//				var ruleb []byte
-				//				if strings.Index(p, "://") == -1 {
-				//					ruleb, err = os.ReadFile(p)
-				//					if err != nil {
-				//						return nil, fmt.Errorf("check filePath:%s", err.Error())
-				//					}
-				//				} else {
-				//					d := Downloader{Url: p}
-				//					ruleb, err = d.Get()
-				//				}
-				//				if err != nil {
-				//					return nil, fmt.Errorf("check filePath:%s", err.Error())
-				//				}
-				//				if configMap[RULES] == nil {
-				//					configMap[RULES] = make(map[string]string)
-				//				}
-				//				if strings.Index(string(ruleb), "modules:") < 0 {
-				//					configMap[RULES][p] = string(ruleb)
-				//				}
-				//			}
-				//		}
-				//	}
-				//}
 			}
 		}
 	}
@@ -431,6 +401,11 @@ func GetClientStr() ([]byte, error) {
 		return nil, err
 	}
 
+	variableNodes, _, err := assembleNode(configMap[VARIABLES])
+	if err != nil {
+		return nil, err
+	}
+
 	SelefraStr, err := yaml.Marshal(selefraNode)
 	if err != nil {
 		return nil, err
@@ -439,8 +414,13 @@ func GetClientStr() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	variableStr, err := yaml.Marshal(variableNodes)
+	if err != nil {
+		return nil, err
+	}
 
 	configStr := append(SelefraStr, providerStr...)
+	configStr = append(configStr, variableStr...)
 	return configStr, nil
 }
 
@@ -710,9 +690,6 @@ func deepFmtModules(module *Module, usedModuleMap map[string]bool) []Module {
 		for i := range module.Children {
 			for i2 := range module.Children[i].Modules {
 				module.Children[i].Modules[i2].Name = module.Name + "." + module.Children[i].Modules[i2].Name
-				for key, value := range module.Input {
-					module.Children[i].Modules[i2].Input[key] = value
-				}
 			}
 			for i3 := range module.Children[i].Modules {
 				output = append(output, deepFmtModules(&module.Children[i].Modules[i3], usedModuleMap)...)
