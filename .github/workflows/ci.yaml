@@ -5,8 +5,8 @@ on:
   push:
 
 jobs:
-  test:
-    name: test
+  selefra_test:
+    name: go test
     runs-on: ubuntu-latest
     services:
       selefra_postgres:
@@ -15,8 +15,6 @@ jobs:
           - 5432:5432
         env:
           POSTGRES_PASSWORD: pass
-          #POSTGRES_DB: test
-          #POSTGRES_USER: postgres
     steps:
       - uses: actions/checkout@v3
         with:
@@ -30,5 +28,47 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           TZ: Asia/Shanghai
-          #SELEFRA_DATABASE_DSN: "host=127.0.0.1 user=postgres password=pass port=5432 dbname=test sslmode=disable"
         run: go mod tidy && go test -short -timeout 3600s ./cmd/apply && go test -short -timeout 3600s ./cmd/provider
+  selefra_upload:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Pull Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Unshallow
+        run: git fetch
+
+      - name: Use Golang
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.18
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v3
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: selefra
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+
+      - uses: keithweaver/aws-s3-github-action@v1.0.0
+        name: Copy Folder
+        with:
+          command: cp
+          source: ./dist/
+          destination: s3://dev-www.selefra.io/app-selefra/
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: us-east-1
+          flags: --recursive
