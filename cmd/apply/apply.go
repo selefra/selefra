@@ -174,12 +174,10 @@ Loading Selefra analysis code ...
 func UploadWorkspace(project string) error {
 	fileMap, err := config.GetAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
-		ui.PrintErrorLn(err.Error())
 		return err
 	}
 	err = httpClient.UploadWorkplace(global.LOGINTOKEN, project, fileMap)
 	if err != nil {
-		ui.PrintErrorLn(err)
 		return err
 	}
 	return nil
@@ -298,7 +296,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 		err = ws.Completed()
 		if err != nil {
-			ui.PrintErrorLn(err)
+			ui.PrintErrorLn(err.Error())
 		}
 	}
 	return nil

@@ -414,13 +414,15 @@ func GetClientStr() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	variableStr, err := yaml.Marshal(variableNodes)
-	if err != nil {
-		return nil, err
-	}
 
 	configStr := append(SelefraStr, providerStr...)
-	configStr = append(configStr, variableStr...)
+	if variableNodes != nil {
+		variableStr, err := yaml.Marshal(variableNodes)
+		if err != nil {
+			return nil, err
+		}
+		configStr = append(configStr, variableStr...)
+	}
 	return configStr, nil
 }
 
