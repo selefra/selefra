@@ -24,7 +24,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	github.com/vbauerster/mpb/v7 v7.5.3
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.1
 )
