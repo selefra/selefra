@@ -1,69 +1,67 @@
 <h1 align="center">
     <a href="https://www.selefra.io" title="Selefra - Infrastructure as Code for Infrastructure Analysis.">
-        <img src=".github/images/logo.png" width="350">
+        <img src=".github/images/logo_colorbg.png" width="900">
     </a>
 </h1>
 
-## Introduction
+# Introduction
 
-Selefra's Infrastructure as Code is the easiest and agile way to analysis IAM,EC2,VPC, and infrastructure ,from any cloud control plane.
+Selefra is an open-source data integration and analysis tool for developers. You can use Selefra to extract, load, and analyze infrastructure data anywhere from Public Cloud, SaaS platform, development platform, and more.
 
-Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS,GCP,Azure,and [hosted data source provider](https://github.com/selefra/selefra-provider-sdk/).
+Simply write code in  YAML and SQL, Selefra automatically  pull control plane data and analysis your AWS, GCP, Azure, and [other hosted data source providers](https://github.com/selefra/registry).
 
-For example, analysis  s3 bucket misconfigured from infrastructure:
-
+For example, here's sample usage of test item `ebs_volume_are_unencrypted`:
 ```yaml
 selefra:
-  name: selefra-demo
-  cli_version: ">=0.0.1"
-  providers:
-    - name: aws
-      source: 'selefra/aws'
-      version: "latest"
-  connection:
-    type: postgres
-    username: postgres
-    password: pass
-    host: localhost
-    port: 5432
-    database: postgres
-    sslmode: disable
-
+    name: example_project
+    cli_version: v0.0.1
+    providers:
+        - name: aws
+          source: selefra/aws
+          version: v0.0.3
 providers:
-  - name: aws
-    regions:
-      - us-east-1
-      
+    - name: aws
+      cache: 1d1h1m1s
+      resources:
+        - aws_*
+      accounts:
+         regions:
+           - us-east-1
 rules:
-  - name: Disabled_MFA
-    query: select * from aws_iam_users where user_name = '<root_account>' and mfa_active = 'f'
+  - name: example_rule_name
+    query: SELECT * FROM aws_ec2_ebs_volumes WHERE encrypted = FALSE
     labels:
-      severity: Critical
+      tag: demo_rule
+      author: Selefra
     metadata:
-      title: "MFA is disabled for root user"
-      description: "MFA is disabled for root user"
-    output: "AWS user has disabled MFA, username: {{.user_name}}"
+      severity: Low
+      provider: AWS
+      resource_type: EC2
+      resource_account_id: '{{.account_id}}'
+      resource_id: '{{.id}}'
+      resource_region: '{{.availability_zone}}'
+      remediation: remediation/ebs_volume_are_unencrypted.md
+      title: EBS volume are unencrypted
+      description: Ensure that EBS volumes are encrypted.
+    output: 'EBS volume is unencrypted, EBS id: {{.id}}, availability zone: {{.availability_zone}}'
 ```
 
 ## Getting Started
+Read detailed documentation for how to [get started](https://selefra.io/docs/get-started/) with Selefra.
 
-    
-
-Learn AWS,GCP,Azure,and more cloud/Infrastructure's usecase with [Getting Started](https://selefra.io/docs/gettingstared) .
-
-Otherwise,run a demo process through the following setps,in miniutes:
+For quick start, run this demo, it should take less than a few miniutes:
 
 ### 1. Install Selefra
 
-To install Selefra on MacOS or [download packages](https://github.com/selefra/selefra/releases)  to install Selefra on other platform.
+For non macOS users, [download packages](https://github.com/selefra/selefra/releases) to install Selefra.
 
-Install the Selefra tap from our Homebrew packages.
+On macOS, tap Selefra with Homebrew:
 
 ```bash
 brew tap selefra/tap
 ```
 
-Now,install Selefra with selefra/tap/selefra
+Next, install Selefra:
 
 ```bash
 brew install selefra/tap/selefra
@@ -75,27 +73,28 @@ brew install selefra/tap/selefra
 selefra init selefra-demo && cd selefra-demo
 ```
 
-### 3. Build infrastructure Analysis code
+### 3. Build code
 
 ```bash
 selefra apply 
 ```
 
+## Documentation
 
+See [Docs](https://selefra.io/docs) for best practices and detailed instructions. In docs, you will find info on installation, CLI usage, project workflow and more guides on how to accomplish cloud inspection tasks.
 
 ## Community
 
-Selefra is a community driven project,we welcome you to file a bug,suggest an improvement ,or request a new feature.
+Selefra is a community-driven project, we welcome you to open a [GitHub Issue](https://github.com/selefra/selefra/issues/new/choose) to report a bug, suggest an improvement, or request new feature.
 
--  Join [Selefra Community Slack](https://selefra.slack.com) to discuss Selefra and join `Selefra Community Hour`.
--  Follow us on [Twitter](https://twitter.com/SelefraCorp) and shard Selefra messages on Twitter.
--  Have question and feature?Now on [Slack](https://selefra.slack.com) or open a [GitHub Issue](https://github.com/selefra/selefra/issues/new/choose)
+-  Join [Selefra Community](https://selefra.io/community/join) on Slack. We host `Community Hour` for tutorials and Q&As on regular basis.
+-  Follow us on [Twitter](https://twitter.com/SelefraCorp) and share your thoughts！
+-  Email us at support@selefra.io
 
+## CONTRIBUTING
 
-## Contributing
-
-To contribute, visit [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra roadmap](https://github.com/orgs/selefra/projects/1)
-
+For developers interested in building Selefra codebase, read through [Contributing.md](https://github.com/selefra/selefra/blob/main/CONTRIBUTING.md) and [Selefra Roadmap](https://github.com/orgs/selefra/projects/1). 
+Let us know what you would like to work on!
 
 ## License
 
