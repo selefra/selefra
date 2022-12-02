@@ -192,6 +192,7 @@ func getSqlTables(sql string) (tables []string) {
 	for i, word := range words {
 		if strings.Contains(word, "from") && i+1 < len(words) {
 			table := strings.Trim(words[i+1], ",")
+			table = strings.Trim(table, ";")
 			if tablesMap[table] == false {
 				tables = append(tables, table)
 				tablesMap[table] = true
