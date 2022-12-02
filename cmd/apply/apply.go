@@ -184,7 +184,8 @@ func UploadWorkspace(project string) error {
 }
 
 func getSqlTables(sql string) (tables []string) {
-	nonStr := strings.Replace(sql, "\n", "", -1)
+	sqlStr := strings.ToLower(sql)
+	nonStr := strings.Replace(sqlStr, "\n", "", -1)
 	s := utils.DeleteExtraSpace(nonStr)
 	words := strings.Split(s, " ")
 	var tablesMap = make(map[string]bool)
