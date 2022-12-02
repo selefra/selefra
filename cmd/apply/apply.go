@@ -190,7 +190,7 @@ func getSqlTables(sql string) (tables []string) {
 	words := strings.Split(s, " ")
 	var tablesMap = make(map[string]bool)
 	for i, word := range words {
-		if strings.Contains(word, "from") && i+1 < len(words) {
+		if word == "from" && i+1 < len(words) {
 			table := strings.Trim(words[i+1], ",")
 			table = strings.Trim(table, ";")
 			if tablesMap[table] == false {
