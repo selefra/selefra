@@ -63,10 +63,17 @@ func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
 	return cp, nil
 }
 
+type Variable struct {
+	Key         string `yaml:"key" json:"key"`
+	Default     string `yaml:"default" json:"default"`
+	Description string `yaml:"description" json:"description"`
+	Author      string `yaml:"author" json:"author"`
+}
+
 type SelefraConfig struct {
-	Selefra   Config                 `yaml:"selefra"`
-	Providers yaml.Node              `yaml:"providers"`
-	Variables map[string]interface{} `yaml:"variables"`
+	Selefra   Config     `yaml:"selefra"`
+	Providers yaml.Node  `yaml:"providers"`
+	Variables []Variable `yaml:"variables"`
 }
 type SelefraConfigInit struct {
 	Selefra   ConfigInit `yaml:"selefra"`

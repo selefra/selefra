@@ -183,6 +183,23 @@ func UploadWorkspace(project string) error {
 	return nil
 }
 
+func getSqlTables(sql string) (tables []string) {
+	nonStr := strings.Replace(sql, "\n", "", -1)
+	s := utils.DeleteExtraSpace(nonStr)
+	words := strings.Split(s, " ")
+	var tablesMap = make(map[string]bool)
+	for i, word := range words {
+		if strings.Contains(word, "from") && i+1 < len(words) {
+			table := strings.Trim(words[i+1], ",")
+			if tablesMap[table] == false {
+				tables = append(tables, table)
+				tablesMap[table] = true
+			}
+		}
+	}
+	return tables
+}
+
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
@@ -190,7 +207,11 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		ui.PrintSuccessLn("Schema:")
 		ui.PrintSuccessLn(schema + "\n")
 		ui.PrintSuccessLn("Description:")
-		desc, err := fmtTemplate(rule.Metadata.Description, s.Variables)
+		var variablesMap = make(map[string]interface{})
+		for i := range s.Variables {
+			variablesMap[s.Variables[i].Key] = s.Variables[i].Default
+		}
+		desc, err := fmtTemplate(rule.Metadata.Description, variablesMap)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -198,7 +219,8 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		ui.PrintSuccessLn("	" + desc)
 
 		ui.PrintSuccessLn("Policy:")
-		queryStr, err := fmtTemplate(rule.Query, s.Variables)
+		queryStr, err := fmtTemplate(rule.Query, variablesMap)
+		uploadTables := getSqlTables(queryStr)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -253,14 +275,16 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 				remediation = err.Error()
 			}
 			outMetaData = append(outMetaData, httpClient.Metadata{
-				Id:          rule.Metadata.Id,
-				Severity:    rule.Metadata.Severity,
-				Remediation: remediation,
-				Provider:    rule.Metadata.Provider,
-				Title:       rule.Metadata.Title,
-				Author:      rule.Metadata.Author,
-				Description: desc,
-				Output:      outByte.String(),
+				Id:           rule.Metadata.Id,
+				Severity:     rule.Metadata.Severity,
+				Remediation:  remediation,
+				Tags:         rule.Metadata.Tags,
+				SrcTableName: uploadTables,
+				Provider:     rule.Metadata.Provider,
+				Title:        rule.Metadata.Title,
+				Author:       rule.Metadata.Author,
+				Description:  desc,
+				Output:       outByte.String(),
 			})
 			ui.PrintSuccessLn("	" + out)
 		}

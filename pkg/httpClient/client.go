@@ -19,15 +19,16 @@ type OutputReq struct {
 }
 
 type Metadata struct {
-	Id          string   `json:"id"`
-	Severity    string   `json:"severity"`
-	Provider    string   `json:"provider"`
-	Tags        []string `json:"tags"`
-	Remediation string   `yaml:"remediation" json:"remediation"`
-	Author      string   `json:"author"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Output      string   `json:"output"`
+	Id           string   `json:"id"`
+	Severity     string   `json:"severity"`
+	Provider     string   `json:"provider"`
+	Tags         []string `json:"tags"`
+	SrcTableName []string `json:"src_table_name"`
+	Remediation  string   `yaml:"remediation" json:"remediation"`
+	Author       string   `json:"author"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Output       string   `json:"output"`
 }
 
 type OutputRes struct {
