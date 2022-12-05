@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"io"
 	"os"
 	"path"
@@ -183,20 +184,23 @@ func UploadWorkspace(project string) error {
 	return nil
 }
 
-func getSqlTables(sql string) (tables []string) {
+func getTableMap(tableMap map[string]bool, schemaTable []*schema.Table) {
+	for i := range schemaTable {
+		tableMap[schemaTable[i].TableName] = true
+		if len(schemaTable[i].SubTables) > 0 {
+			getTableMap(tableMap, schemaTable[i].SubTables)
+		}
+	}
+}
+
+func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 	sqlStr := strings.ToLower(sql)
 	nonStr := strings.Replace(sqlStr, "\n", "", -1)
 	s := utils.DeleteExtraSpace(nonStr)
 	words := strings.Split(s, " ")
-	var tablesMap = make(map[string]bool)
-	for i, word := range words {
-		if word == "from" && i+1 < len(words) {
-			table := strings.Trim(words[i+1], ",")
-			table = strings.Trim(table, ";")
-			if tablesMap[table] == false {
-				tables = append(tables, table)
-				tablesMap[table] = true
-			}
+	for _, word := range words {
+		if tableMap[word] {
+			tables = append(tables, word)
 		}
 	}
 	return tables
@@ -222,7 +226,16 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 
 		ui.PrintSuccessLn("Policy:")
 		queryStr, err := fmtTemplate(rule.Query, variablesMap)
-		uploadTables := getSqlTables(queryStr)
+		schemaTables, schemaDiag := c.Storage.TableList(ctx, schema)
+		if schemaDiag != nil {
+			if schemaDiag.HasError() {
+				return ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			}
+		}
+		var tableMap = make(map[string]bool)
+		getTableMap(tableMap, schemaTables)
+
+		uploadTables := getSqlTables(queryStr, tableMap)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
