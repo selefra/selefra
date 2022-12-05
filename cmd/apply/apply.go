@@ -193,16 +193,32 @@ func getTableMap(tableMap map[string]bool, schemaTable []*schema.Table) {
 	}
 }
 
-func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
-	sqlStr := strings.ToLower(sql)
-	nonStr := strings.Replace(sqlStr, "\n", "", -1)
-	s := utils.DeleteExtraSpace(nonStr)
-	words := strings.Split(s, " ")
-	for _, word := range words {
-		if tableMap[word] {
-			tables = append(tables, word)
+func match(s string, whitelistWordSet map[string]bool) []string {
+	var matchResultSet []string
+	inWord := false
+	lastIndex := 0
+	for index, c := range s {
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c >= '0' && c <= '9' {
+			if !inWord {
+				inWord = true
+				lastIndex = index
+			}
+		} else {
+			if inWord {
+				word := s[lastIndex:index]
+				if _, exists := whitelistWordSet[word]; exists {
+					matchResultSet = append(matchResultSet, word)
+				}
+				inWord = false
+			}
 		}
 	}
+	return matchResultSet
+}
+
+func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
+	nonStr := strings.Replace(sql, "\n", "", -1)
+	tables = match(nonStr, tableMap)
 	return tables
 }
 
