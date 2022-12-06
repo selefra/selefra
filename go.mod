@@ -18,7 +18,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/selefra/selefra-provider-sdk v0.0.13-0.20221117025044-021b575668f6
+	github.com/selefra/selefra-provider-sdk v0.0.14-0.20221202095835-3beadd553e0e
 	github.com/selefra/selefra-utils v0.0.2
 	github.com/songzhibin97/gkit v1.2.7
 	github.com/spf13/cobra v1.6.1
