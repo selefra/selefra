@@ -38,8 +38,9 @@ var typeMap = map[string]bool{
 }
 
 type CliProviders struct {
-	Cache     string   `yaml:"cache" json:"cache"`
-	Resources []string `yaml:"resources" json:"resources"`
+	Cache         string   `yaml:"cache" json:"cache"`
+	MaxGoroutines uint64   `yaml:"maxGoroutines" json:"maxGoroutines"`
+	Resources     []string `yaml:"resources" json:"resources"`
 }
 
 func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {

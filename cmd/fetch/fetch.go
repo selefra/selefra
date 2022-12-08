@@ -135,9 +135,13 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			tables = append(tables, resources[i])
 		}
 	}
+	var maxGoroutines uint64 = 100
+	if cp.MaxGoroutines > 0 {
+		maxGoroutines = cp.MaxGoroutines
+	}
 	recv, err := provider.PullTables(ctx, &shard.PullTablesRequest{
 		Tables:        tables,
-		MaxGoroutines: 100,
+		MaxGoroutines: maxGoroutines,
 		Timeout:       0,
 	})
 	if err != nil {
