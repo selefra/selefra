@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"io"
 	"os"
 	"path"
@@ -151,7 +152,7 @@ Loading Selefra analysis code ...
 
 		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
 		schema := config.GetSchemaKey(s.Selefra.Providers[i])
-		err = RunRules(ctx, c, project, taskUUId, mRules, schema)
+		err = RunRules(ctx, s, c, project, taskUUId, mRules, schema)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
@@ -174,29 +175,65 @@ Loading Selefra analysis code ...
 func UploadWorkspace(project string) error {
 	fileMap, err := config.GetAllConfig(*global.WORKSPACE, nil)
 	if err != nil {
-		ui.PrintErrorLn(err.Error())
 		return err
 	}
 	err = httpClient.UploadWorkplace(global.LOGINTOKEN, project, fileMap)
 	if err != nil {
-		ui.PrintErrorLn(err)
 		return err
 	}
 	return nil
 }
 
-func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
+func getTableMap(tableMap map[string]bool, schemaTable []*schema.Table) {
+	for i := range schemaTable {
+		tableMap[schemaTable[i].TableName] = true
+		if len(schemaTable[i].SubTables) > 0 {
+			getTableMap(tableMap, schemaTable[i].SubTables)
+		}
+	}
+}
+
+func match(s string, whitelistWordSet map[string]bool) []string {
+	var matchResultSet []string
+	inWord := false
+	lastIndex := 0
+	for index, c := range s {
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c >= '0' && c <= '9' {
+			if !inWord {
+				inWord = true
+				lastIndex = index
+			}
+		} else {
+			if inWord {
+				word := s[lastIndex:index]
+				if _, exists := whitelistWordSet[word]; exists {
+					matchResultSet = append(matchResultSet, word)
+				}
+				inWord = false
+			}
+		}
+	}
+	return matchResultSet
+}
+
+func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
+	nonStr := strings.Replace(sql, "\n", "", -1)
+	tables = match(nonStr, tableMap)
+	return tables
+}
+
+func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var outputReq []httpClient.OutputReq
 	for _, rule := range rules {
-		var params = make(map[string]interface{})
-		for key, input := range rule.Input {
-			params[key] = input["default"]
-		}
 		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
 		ui.PrintSuccessLn("Schema:")
 		ui.PrintSuccessLn(schema + "\n")
 		ui.PrintSuccessLn("Description:")
-		desc, err := fmtTemplate(rule.Metadata.Description, params)
+		var variablesMap = make(map[string]interface{})
+		for i := range s.Variables {
+			variablesMap[s.Variables[i].Key] = s.Variables[i].Default
+		}
+		desc, err := fmtTemplate(rule.Metadata.Description, variablesMap)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -204,7 +241,17 @@ func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, r
 		ui.PrintSuccessLn("	" + desc)
 
 		ui.PrintSuccessLn("Policy:")
-		queryStr, err := fmtTemplate(rule.Query, params)
+		queryStr, err := fmtTemplate(rule.Query, variablesMap)
+		schemaTables, schemaDiag := c.Storage.TableList(ctx, schema)
+		if schemaDiag != nil {
+			if schemaDiag.HasError() {
+				return ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			}
+		}
+		var tableMap = make(map[string]bool)
+		getTableMap(tableMap, schemaTables)
+
+		uploadTables := getSqlTables(queryStr, tableMap)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return err
@@ -259,14 +306,16 @@ func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, r
 				remediation = err.Error()
 			}
 			outMetaData = append(outMetaData, httpClient.Metadata{
-				Id:          rule.Metadata.Id,
-				Severity:    rule.Metadata.Severity,
-				Remediation: remediation,
-				Provider:    rule.Metadata.Provider,
-				Title:       rule.Metadata.Title,
-				Author:      rule.Metadata.Author,
-				Description: desc,
-				Output:      outByte.String(),
+				Id:           rule.Metadata.Id,
+				Severity:     rule.Metadata.Severity,
+				Remediation:  remediation,
+				Tags:         rule.Metadata.Tags,
+				SrcTableName: uploadTables,
+				Provider:     rule.Metadata.Provider,
+				Title:        rule.Metadata.Title,
+				Author:       rule.Metadata.Author,
+				Description:  desc,
+				Output:       outByte.String(),
 			})
 			ui.PrintSuccessLn("	" + out)
 		}
@@ -302,7 +351,7 @@ func RunRules(ctx context.Context, c *client.Client, project, taskUUId string, r
 		}
 		err = ws.Completed()
 		if err != nil {
-			ui.PrintErrorLn(err)
+			ui.PrintErrorLn(err.Error())
 		}
 	}
 	return nil
@@ -395,16 +444,10 @@ func RunPathModule(module config.Module) *[]config.Rule {
 				}
 				ruleConfig.Rules[i].Query = string(sqlByte)
 			}
-			for key, input := range ruleConfig.Rules[i].Input {
-				if module.Input[key] != nil {
-					input["default"] = module.Input[key]
-				}
-			}
 			ui.PrintSuccessF("	%s - Rule %s: loading ... ", use, baseRule.Rules[i].Name)
 		}
 		resRule.Rules = append(resRule.Rules, ruleConfig.Rules...)
 	}
-
 	return &resRule.Rules
 }
 
