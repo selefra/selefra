@@ -39,7 +39,7 @@ var typeMap = map[string]bool{
 
 type CliProviders struct {
 	Cache         string   `yaml:"cache" json:"cache"`
-	MaxGoroutines uint64   `yaml:"maxGoroutines" json:"maxGoroutines"`
+	MaxGoroutines uint64   `yaml:"max_goroutines" json:"max_goroutines"`
 	Resources     []string `yaml:"resources" json:"resources"`
 }
 
