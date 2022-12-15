@@ -16,6 +16,13 @@ type connClient struct {
 	Remote string
 }
 
+func (c connClient) WriteJsonLock(v any) error {
+	c.l.Lock()
+	defer c.l.Unlock()
+	err := c.conn.WriteJSON(v)
+	return err
+}
+
 type BaseConnectionInfo struct {
 	ID         string
 	Token      string
@@ -55,8 +62,6 @@ func Init() {
 }
 
 func SendLog(msg string) error {
-	Client.l.Lock()
-	defer Client.l.Unlock()
 	if registerSuccess {
 		msg := connectMsg{
 			ActionName: LogStream,
@@ -69,7 +74,7 @@ func SendLog(msg string) error {
 				RemoteType: "cli",
 			},
 		}
-		err := Client.conn.WriteJSON(msg)
+		err := Client.WriteJsonLock(msg)
 		if err != nil {
 			return err
 		}
@@ -93,7 +98,7 @@ func Regis(token, taskId string) error {
 	Client.Token = token
 	Client.TaskId = taskId
 	registerSuccess = true
-	err := Client.conn.WriteJSON(msg)
+	err := Client.WriteJsonLock(msg)
 	if err != nil {
 		return err
 	}
@@ -115,7 +120,7 @@ func PingF() {
 				RemoteType: "cli",
 			},
 		}
-		err := Client.conn.WriteJSON(msg)
+		err := Client.WriteJsonLock(msg)
 		if err != nil {
 			return
 		}
@@ -134,7 +139,7 @@ func Completed() error {
 			RemoteType: "cli",
 		},
 	}
-	err := Client.conn.WriteJSON(msg)
+	err := Client.WriteJsonLock(msg)
 	if err != nil {
 		return err
 	}
