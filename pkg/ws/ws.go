@@ -3,11 +3,13 @@ package ws
 import (
 	"github.com/gorilla/websocket"
 	"github.com/selefra/selefra/global"
+	"sync"
 	"time"
 )
 
 type connClient struct {
 	conn   *websocket.Conn
+	l      sync.Mutex
 	ID     string
 	Token  string
 	TaskId string
@@ -53,6 +55,8 @@ func Init() {
 }
 
 func SendLog(msg string) error {
+	Client.l.Lock()
+	defer Client.l.Unlock()
 	if registerSuccess {
 		msg := connectMsg{
 			ActionName: LogStream,
