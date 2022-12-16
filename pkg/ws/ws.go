@@ -16,7 +16,7 @@ type connClient struct {
 	Remote string
 }
 
-func (c connClient) WriteJsonLock(v any) error {
+func (c *connClient) WriteJsonLock(v any) error {
 	c.l.Lock()
 	defer c.l.Unlock()
 	err := c.conn.WriteJSON(v)
@@ -46,7 +46,7 @@ const TaskCompleted = "task_completed"
 var Client connClient
 var registerSuccess bool
 
-func (c connClient) Close() error {
+func (c *connClient) Close() error {
 	registerSuccess = false
 	return c.conn.Close()
 }
