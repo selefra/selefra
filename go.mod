@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
-	github.com/aws/aws-sdk-go v1.44.143
+	github.com/aws/aws-sdk-go v1.44.162
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/containerd/containerd v1.6.10
