@@ -346,9 +346,12 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 	}
 	if global.LOGINTOKEN != "" {
+		ui.PrintSuccessLn("issues uploading...")
 		err := httpClient.OutPut(global.LOGINTOKEN, project, taskUUId, outputReq)
 		if err != nil {
 			ui.PrintErrorLn("issues upload error:" + err.Error())
+		} else {
+			ui.PrintSuccessLn("issues upload success")
 		}
 		err = ws.Completed()
 		if err != nil {
