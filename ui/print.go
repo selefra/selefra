@@ -130,7 +130,6 @@ func PrintWarningF(format string, a ...interface{}) {
 		defaultLogger.Log(hclog.Warn, format, a...)
 	}
 	PrintCustomizeF(WarningColor, format, a...)
-
 }
 
 func PrintSuccessF(format string, a ...interface{}) {
@@ -181,22 +180,34 @@ func PrintInfoLn(a ...interface{}) {
 }
 
 func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	err := ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	if err != nil {
+		PrintErrorLn("websocket error:" + err.Error())
+	}
 	_, _ = c.Printf(format+"\n", a...)
 }
 
 func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	err := ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	if err != nil {
+		PrintErrorLn("websocket error:" + err.Error())
+	}
 	_, _ = c.Printf(format, a...)
 }
 
 func PrintCustomizeLn(c *color.Color, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintln(a...), c))
+	err := ws.SendLog(createLog(fmt.Sprintln(a...), c))
+	if err != nil {
+		PrintErrorLn("websocket error:" + err.Error())
+	}
 	_, _ = c.Println(a...)
 }
 
 func PrintCustomizeLnNotShow(a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+	err := ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+	if err != nil {
+		PrintErrorLn("websocket error:" + err.Error())
+	}
 }
 
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {

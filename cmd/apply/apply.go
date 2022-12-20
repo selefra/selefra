@@ -348,11 +348,11 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 	if global.LOGINTOKEN != "" {
 		err := httpClient.OutPut(global.LOGINTOKEN, project, taskUUId, outputReq)
 		if err != nil {
-			ui.PrintErrorLn(err)
+			ui.PrintErrorLn("issues upload error:" + err.Error())
 		}
 		err = ws.Completed()
 		if err != nil {
-			ui.PrintErrorLn(err.Error())
+			ui.PrintErrorLn("websocket completed error:" + err.Error())
 		}
 	}
 	return nil
