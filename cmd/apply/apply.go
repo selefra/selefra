@@ -272,8 +272,8 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		rows := table.GetMatrix()
 		ui.PrintSuccessLn("Output")
 		var outMetaData []httpClient.Metadata
-		var baseRow = make(map[string]interface{})
 		for _, row := range rows {
+			var baseRow = make(map[string]interface{})
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
 			for index, value := range row {
@@ -317,31 +317,32 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 				Description:  desc,
 				Output:       outByte.String(),
 			})
+
 			ui.PrintSuccessLn("	" + out)
-		}
 
-		var outLabel = make(map[string]interface{})
-		for key := range rule.Labels {
-			switch rule.Labels[key].(type) {
-			case string:
-				outLabel[key], _ = fmtTemplate(rule.Labels[key].(string), baseRow)
-			case []string:
-				var out []string
-				for _, v := range rule.Labels[key].([]string) {
-					s, _ := fmtTemplate(v, baseRow)
-					out = append(out, s)
+			var outLabel = make(map[string]interface{})
+			for key := range rule.Labels {
+				switch rule.Labels[key].(type) {
+				case string:
+					outLabel[key], _ = fmtTemplate(rule.Labels[key].(string), baseRow)
+				case []string:
+					var out []string
+					for _, v := range rule.Labels[key].([]string) {
+						s, _ := fmtTemplate(v, baseRow)
+						out = append(out, s)
+					}
+					outLabel[key] = out
 				}
-				outLabel[key] = out
 			}
-		}
 
-		if global.LOGINTOKEN != "" {
-			var req httpClient.OutputReq
-			req.Name = rule.Name
-			req.Query = rule.Query
-			req.Metadata = outMetaData
-			req.Labels = outLabel
-			outputReq = append(outputReq, req)
+			if global.LOGINTOKEN != "" {
+				var req httpClient.OutputReq
+				req.Name = rule.Name
+				req.Query = rule.Query
+				req.Metadata = outMetaData
+				req.Labels = outLabel
+				outputReq = append(outputReq, req)
+			}
 		}
 	}
 	if global.LOGINTOKEN != "" {
