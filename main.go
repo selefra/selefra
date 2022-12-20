@@ -17,8 +17,15 @@ package main
 
 import (
 	"github.com/selefra/selefra/cmd"
+	"github.com/selefra/selefra/ui"
+	"runtime/debug"
 )
 
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			ui.PrintErrorF("Panic: %v\n%s", err, debug.Stack())
+		}
+	}()
 	cmd.Execute()
 }
