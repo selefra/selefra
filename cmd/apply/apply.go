@@ -224,6 +224,7 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var outputReq []httpClient.OutputReq
+	ws.SendIssue(ws.IssueStart, "")
 	for _, rule := range rules {
 		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
 		ui.PrintSuccessLn("Schema:")
@@ -271,8 +272,8 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		column := table.GetColumnNames()
 		rows := table.GetMatrix()
 		ui.PrintSuccessLn("Output")
-		var outMetaData []httpClient.Metadata
 		for _, row := range rows {
+			var outMetaData httpClient.Metadata
 			var baseRow = make(map[string]interface{})
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
@@ -305,7 +306,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 			if err != nil {
 				remediation = err.Error()
 			}
-			outMetaData = append(outMetaData, httpClient.Metadata{
+			outMetaData = httpClient.Metadata{
 				Id:           rule.Metadata.Id,
 				Severity:     rule.Metadata.Severity,
 				Remediation:  remediation,
@@ -316,7 +317,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 				Author:       rule.Metadata.Author,
 				Description:  desc,
 				Output:       outByte.String(),
-			})
+			}
 
 			ui.PrintSuccessLn("	" + out)
 
@@ -341,17 +342,24 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 				req.Query = rule.Query
 				req.Metadata = outMetaData
 				req.Labels = outLabel
-				outputReq = append(outputReq, req)
+				reqBytes, err := json.Marshal(req)
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					continue
+				}
+				err = ws.SendIssue(ws.Issue, string(reqBytes))
+				if err != nil {
+					ui.PrintErrorLn(err.Error())
+					continue
+				}
 			}
 		}
 	}
+	ws.SendIssue(ws.IssueEnd, "")
 	if global.LOGINTOKEN != "" {
-		ui.PrintSuccessLn("issues uploading...")
 		err := httpClient.OutPut(global.LOGINTOKEN, project, taskUUId, outputReq)
 		if err != nil {
 			ui.PrintErrorLn("issues upload error:" + err.Error())
-		} else {
-			ui.PrintSuccessLn("issues upload success")
 		}
 		err = ws.Completed()
 		if err != nil {

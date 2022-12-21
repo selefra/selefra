@@ -38,6 +38,9 @@ type connectMsg struct {
 }
 
 const LogStream = "logStream"
+const Issue = "issue"
+const IssueStart = "issue_start"
+const IssueEnd = "issue_end"
 const Register = "register"
 const Ping = "ping"
 const Reconnect = "reconnect"
@@ -65,6 +68,28 @@ func SendLog(msg string) error {
 	if registerSuccess {
 		msg := connectMsg{
 			ActionName: LogStream,
+			Data:       msg,
+			Msg:        "",
+			BaseInfo: BaseConnectionInfo{
+				ID:         "",
+				Token:      Client.Token,
+				TaskId:     Client.TaskId,
+				RemoteType: "cli",
+			},
+		}
+		err := Client.WriteJsonLock(msg)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return nil
+}
+
+func SendIssue(Action string, msg string) error {
+	if registerSuccess {
+		msg := connectMsg{
+			ActionName: Action,
 			Data:       msg,
 			Msg:        "",
 			BaseInfo: BaseConnectionInfo{

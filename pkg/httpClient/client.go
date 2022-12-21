@@ -15,7 +15,7 @@ type OutputReq struct {
 	Name     string                 `json:"name"`
 	Query    string                 `json:"query"`
 	Labels   map[string]interface{} `json:"labels"`
-	Metadata []Metadata             `json:"metadata"`
+	Metadata Metadata               `json:"metadata"`
 }
 
 type Metadata struct {
