@@ -17,6 +17,7 @@ package main
 
 import (
 	"github.com/selefra/selefra/cmd"
+	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui"
 	"runtime/debug"
 )
@@ -28,4 +29,7 @@ func main() {
 		}
 	}()
 	cmd.Execute()
+	if ws.Client.Conn() != nil {
+		ws.Client.Close()
+	}
 }

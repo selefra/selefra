@@ -1,11 +1,25 @@
 package ws
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/logger"
 	"sync"
 	"time"
 )
+
+var wsLogger, _ = logger.NewLogger(logger.Config{
+	FileLogEnabled:    true,
+	ConsoleLogEnabled: false,
+	EncodeLogsAsJson:  true,
+	ConsoleNoColor:    true,
+	Source:            "cli_ws",
+	Directory:         "logs",
+	Level:             "info",
+})
+
+var reloadTime = 0
 
 type connClient struct {
 	conn   *websocket.Conn
@@ -19,7 +33,23 @@ type connClient struct {
 func (c *connClient) WriteJsonLock(v any) error {
 	c.l.Lock()
 	defer c.l.Unlock()
+	wsLogger.Info("send msg: %s", v)
 	err := c.conn.WriteJSON(v)
+	if err != nil {
+		wsLogger.Error("send msg error: %s", err)
+		for reloadTime < 5 {
+			reloadTime++
+			err := ReLoad()
+			if err != nil {
+				wsLogger.Error("reconnect error: %s", err)
+				time.Sleep(5 * time.Second)
+			} else {
+				c.WriteJsonLock(v)
+				reloadTime = 0
+				break
+			}
+		}
+	}
 	return err
 }
 
@@ -52,6 +82,10 @@ var registerSuccess bool
 func (c *connClient) Close() error {
 	registerSuccess = false
 	return c.conn.Close()
+}
+
+func (c *connClient) Conn() *websocket.Conn {
+	return c.conn
 }
 
 func Init() {
@@ -131,6 +165,34 @@ func Regis(token, taskId string) error {
 	return nil
 }
 
+func ReLoad() error {
+	wsLogger.Info(fmt.Sprintf("reconnect time: %d", reloadTime))
+	di := websocket.Dialer{}
+	conn, _, err := di.Dial("wss://"+global.SERVER+"/cli/ws/log_stream", nil)
+	if err != nil {
+		return err
+	}
+	Client.conn = conn
+	msg := connectMsg{
+		ActionName: Register,
+		Data:       nil,
+		Msg:        "",
+		BaseInfo: BaseConnectionInfo{
+			ID:         "",
+			Token:      Client.Token,
+			TaskId:     Client.TaskId,
+			RemoteType: "cli",
+		},
+	}
+	registerSuccess = true
+	err = Client.WriteJsonLock(msg)
+	if err != nil {
+		return err
+	}
+	go PingF()
+	return nil
+}
+
 func PingF() {
 	for {
 		time.Sleep(5 * time.Second)
@@ -173,9 +235,11 @@ func Completed() error {
 
 func onMessage() {
 	for {
-		_, _, err := Client.conn.ReadMessage()
+		msg, _, err := Client.conn.ReadMessage()
+		wsLogger.Info("ws_res msg: %s", msg)
 		if err != nil {
-			break
+			wsLogger.Error(fmt.Sprintf("cli ws error: %s", err.Error()))
+			return
 		}
 	}
 }
