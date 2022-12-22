@@ -223,7 +223,6 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 }
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
-	var outputReq []httpClient.OutputReq
 	ws.SendIssue(ws.IssueStart, "")
 	for _, rule := range rules {
 		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
@@ -355,13 +354,9 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 			}
 		}
 	}
-	ws.SendIssue(ws.IssueEnd, "")
 	if global.LOGINTOKEN != "" {
-		err := httpClient.OutPut(global.LOGINTOKEN, project, taskUUId, outputReq)
-		if err != nil {
-			ui.PrintErrorLn("issues upload error:" + err.Error())
-		}
-		err = ws.Completed()
+		ws.SendIssue(ws.IssueEnd, "")
+		err := ws.Completed()
 		if err != nil {
 			ui.PrintErrorLn("websocket completed error:" + err.Error())
 		}

@@ -239,6 +239,17 @@ func onMessage() {
 		wsLogger.Info("ws_res msg: %d,%s", msgType, msg)
 		if err != nil {
 			wsLogger.Error(fmt.Sprintf("cli ws error: %s", err.Error()))
+			for reloadTime < 5 {
+				reloadTime++
+				err := ReLoad()
+				if err != nil {
+					wsLogger.Error("reconnect error: %s", err)
+					time.Sleep(5 * time.Second)
+				} else {
+					reloadTime = 0
+					break
+				}
+			}
 			return
 		}
 	}
