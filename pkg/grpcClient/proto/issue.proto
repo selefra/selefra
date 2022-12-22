@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "proto/issue";
+
+message metadata {
+  string id = 1;
+  string Severity     = 2;
+  string Provider     = 3;
+  repeated string Tags     = 4;
+  repeated  string SrcTableName  = 5;
+  string Remediation  = 6;
+  string Author        = 7;
+  string Title         = 8;
+  string Description   = 9;
+  string Output      = 10;
+}
+
+message Req {
+  string name = 1;
+  string query = 2;
+  metadata metadata = 3;
+  map<string,string> labels = 4;
+  string token = 5;
+  string projectName = 6;
+  string taskUUID =7;
+}
+
+message Res {
+  string results = 1;
+}
+
+
+service Issue{
+  rpc UploadIssueStream(stream Req)returns (Res){};
+}

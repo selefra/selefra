@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
+	"github.com/selefra/selefra/pkg/grpcClient"
+	issue "github.com/selefra/selefra/pkg/grpcClient/proto"
 	"io"
 	"os"
 	"path"
@@ -223,16 +225,48 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 }
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
-	ws.SendIssue(ws.IssueStart, "")
+	var inClient issue.Issue_UploadIssueStreamClient
+	if global.LOGINTOKEN != "" {
+		gclient, conn, err := grpcClient.InitConn()
+		if conn != nil {
+			defer conn.Close()
+		}
+		if err != nil {
+			ui.PrintErrorLn("grpc error:" + err.Error())
+			return err
+		}
+		inClient, err = gclient.UploadIssueStream(ctx)
+		if err != nil {
+			ui.PrintErrorLn("grpc error:" + err.Error())
+			return err
+		}
+	}
 	for _, rule := range rules {
-		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
-		ui.PrintSuccessLn("Schema:")
-		ui.PrintSuccessLn(schema + "\n")
-		ui.PrintSuccessLn("Description:")
 		var variablesMap = make(map[string]interface{})
 		for i := range s.Variables {
 			variablesMap[s.Variables[i].Key] = s.Variables[i].Default
 		}
+		queryStr, err := fmtTemplate(rule.Query, variablesMap)
+		res, diag := c.Storage.Query(ctx, queryStr)
+		if diag != nil && diag.HasError() {
+			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+			continue
+		}
+		table, diag := res.ReadRows(-1)
+		if diag != nil && diag.HasError() {
+			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+			continue
+		}
+		column := table.GetColumnNames()
+		rows := table.GetMatrix()
+		if len(rows) == 0 {
+			continue
+		}
+		ui.PrintSuccessF("%s - Rule \"%s\"\n", rule.Path, rule.Name)
+		ui.PrintSuccessLn("Schema:")
+		ui.PrintSuccessLn(schema + "\n")
+		ui.PrintSuccessLn("Description:")
+
 		desc, err := fmtTemplate(rule.Metadata.Description, variablesMap)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
@@ -241,7 +275,6 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		ui.PrintSuccessLn("	" + desc)
 
 		ui.PrintSuccessLn("Policy:")
-		queryStr, err := fmtTemplate(rule.Query, variablesMap)
 		schemaTables, schemaDiag := c.Storage.TableList(ctx, schema)
 		if schemaDiag != nil {
 			if schemaDiag.HasError() {
@@ -258,21 +291,9 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 		ui.PrintSuccessLn("	" + queryStr)
 
-		res, diag := c.Storage.Query(ctx, queryStr)
-		if diag != nil && diag.HasError() {
-			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-			continue
-		}
-		table, diag := res.ReadRows(-1)
-		if diag != nil && diag.HasError() {
-			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-			continue
-		}
-		column := table.GetColumnNames()
-		rows := table.GetMatrix()
 		ui.PrintSuccessLn("Output")
 		for _, row := range rows {
-			var outMetaData httpClient.Metadata
+			var outMetaData issue.Metadata
 			var baseRow = make(map[string]interface{})
 			var outPut = rule.Output
 			var outMap = make(map[string]interface{})
@@ -305,7 +326,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 			if err != nil {
 				remediation = err.Error()
 			}
-			outMetaData = httpClient.Metadata{
+			outMetaData = issue.Metadata{
 				Id:           rule.Metadata.Id,
 				Severity:     rule.Metadata.Severity,
 				Remediation:  remediation,
@@ -320,33 +341,33 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 
 			ui.PrintSuccessLn("	" + out)
 
-			var outLabel = make(map[string]interface{})
+			var outLabel = make(map[string]string)
 			for key := range rule.Labels {
 				switch rule.Labels[key].(type) {
 				case string:
-					outLabel[key], _ = fmtTemplate(rule.Labels[key].(string), baseRow)
+					outStr, _ := fmtTemplate(rule.Labels[key].(string), baseRow)
+					outLabel[key] = outStr
 				case []string:
 					var out []string
 					for _, v := range rule.Labels[key].([]string) {
 						s, _ := fmtTemplate(v, baseRow)
 						out = append(out, s)
 					}
-					outLabel[key] = out
+					outLabel[key] = strings.Join(out, ",")
 				}
 			}
 
 			if global.LOGINTOKEN != "" {
-				var req httpClient.OutputReq
-				req.Name = rule.Name
-				req.Query = rule.Query
-				req.Metadata = outMetaData
-				req.Labels = outLabel
-				reqBytes, err := json.Marshal(req)
-				if err != nil {
-					ui.PrintErrorLn(err.Error())
-					continue
+				reqs := issue.Req{
+					Name:        rule.Name,
+					Query:       rule.Query,
+					Metadata:    &outMetaData,
+					Labels:      outLabel,
+					ProjectName: project,
+					TaskUUID:    taskUUId,
+					Token:       global.LOGINTOKEN,
 				}
-				err = ws.SendIssue(ws.Issue, string(reqBytes))
+				err = inClient.Send(&reqs)
 				if err != nil {
 					ui.PrintErrorLn(err.Error())
 					continue
@@ -355,7 +376,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 	}
 	if global.LOGINTOKEN != "" {
-		ws.SendIssue(ws.IssueEnd, "")
+		inClient.CloseSend()
 		err := ws.Completed()
 		if err != nil {
 			ui.PrintErrorLn("websocket completed error:" + err.Error())

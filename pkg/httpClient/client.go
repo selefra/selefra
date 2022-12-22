@@ -23,10 +23,10 @@ var httpLogger, _ = logger.NewLogger(logger.Config{
 })
 
 type OutputReq struct {
-	Name     string                 `json:"name"`
-	Query    string                 `json:"query"`
-	Labels   map[string]interface{} `json:"labels"`
-	Metadata Metadata               `json:"metadata"`
+	Name     string              `json:"name"`
+	Query    string              `json:"query"`
+	Labels   map[string][]string `json:"labels"`
+	Metadata Metadata            `json:"metadata"`
 }
 
 type Metadata struct {
