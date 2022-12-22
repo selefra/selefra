@@ -235,8 +235,8 @@ func Completed() error {
 
 func onMessage() {
 	for {
-		msg, _, err := Client.conn.ReadMessage()
-		wsLogger.Info("ws_res msg: %s", msg)
+		msgType, msg, err := Client.conn.ReadMessage()
+		wsLogger.Info("ws_res msg: %d,%s", msgType, msg)
 		if err != nil {
 			wsLogger.Error(fmt.Sprintf("cli ws error: %s", err.Error()))
 			return
