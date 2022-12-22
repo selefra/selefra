@@ -10,7 +10,7 @@ import (
 var opts []grpc.DialOption
 
 func InitConn() (issue.IssueClient, *grpc.ClientConn, error) {
-	conn, err := grpc.Dial("dev-tcp.selefra.io port:1234", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("dev-tcp.selefra.io:1234", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}
