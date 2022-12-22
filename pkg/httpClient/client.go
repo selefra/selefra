@@ -6,10 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/logger"
 	"io"
 	"net/http"
 	"os"
 )
+
+var httpLogger, _ = logger.NewLogger(logger.Config{
+	FileLogEnabled:    true,
+	ConsoleLogEnabled: false,
+	EncodeLogsAsJson:  true,
+	ConsoleNoColor:    true,
+	Source:            "cli_http",
+	Directory:         "logs",
+	Level:             "info",
+})
 
 type OutputReq struct {
 	Name     string                 `json:"name"`
@@ -80,6 +91,7 @@ type Data struct {
 
 func CliHttpClient[T any](method, url string, info interface{}) (*Res[T], error) {
 	var client http.Client
+	httpLogger.Info("request info: %s , %s", url, info)
 	bytesData, err := json.Marshal(info)
 	if err != nil {
 		return nil, err
@@ -99,6 +111,7 @@ func CliHttpClient[T any](method, url string, info interface{}) (*Res[T], error)
 		return nil, errors.New("404 not found")
 	}
 	respBytes, err := io.ReadAll(resp.Body)
+	httpLogger.Info("resp info: %s , %s", url, string(respBytes))
 	if err != nil {
 		return nil, err
 	}
