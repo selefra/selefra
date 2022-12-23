@@ -15,6 +15,7 @@ func getDial() string {
 	var dialMap = make(map[string]string)
 	dialMap["dev-api.selefra.io"] = "dev-tcp.selefra.io"
 	dialMap["main-api.selefra.io"] = "main-tcp.selefra.io"
+	dialMap["pre-api.selefra.io"] = "pre-tcp.selefra.io"
 	if dialMap[global.SERVER] != "" {
 		return dialMap[global.SERVER]
 	}
