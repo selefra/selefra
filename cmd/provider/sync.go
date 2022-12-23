@@ -70,7 +70,7 @@ func Sync(lockCtx context.Context) (errLogs []string, err error) {
 				break
 			}
 			time.Sleep(5 * time.Second)
-			ui.LogInfo(fmt.Sprintf("	%s@%s is locked, waiting for unlock...\n", p.Name, p.Version))
+			//ui.PrintWarningF(fmt.Sprintf("	%s@%s is locked, waiting for unlock...\n", p.Name, p.Version))
 		}
 		go tools.Lock(lockCtx, *p, *cof)
 		need, _ := tools.NeedFetch(*p, *cof)

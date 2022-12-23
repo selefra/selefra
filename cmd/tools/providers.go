@@ -199,7 +199,12 @@ func Lock(ctx context.Context, provider config.ProviderRequired, cof config.Sele
 			Unlock(provider, cof)
 			return ctx.Err()
 		case <-ticker.C:
-			err = SetStoreValue(cof, &provider, requireKey, time.Now().Format(time.RFC3339))
+			time := time.Now().Format(time.RFC3339)
+			err = SetStoreValue(cof, &provider, requireKey, time)
+			if err != nil {
+				return err
+			}
+			err = SetStoreValue(cof, &provider, time, "true")
 			if err != nil {
 				return err
 			}
@@ -209,7 +214,11 @@ func Lock(ctx context.Context, provider config.ProviderRequired, cof config.Sele
 
 func Unlock(provider config.ProviderRequired, cof config.SelefraConfig) error {
 	requireKey := config.GetLockKey()
-	return SetStoreValue(cof, &provider, requireKey, "")
+	timeLock, err := GetStoreValue(cof, &provider, requireKey)
+	if err != nil {
+		return err
+	}
+	return SetStoreValue(cof, &provider, timeLock, "false")
 }
 
 func Locked(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
@@ -222,9 +231,14 @@ func Locked(required config.ProviderRequired, cof config.SelefraConfig) (bool, e
 	if err != nil {
 		return false, err
 	}
-	lockingStep, err := parseDuration("1m")
-	if time.Now().Sub(lockingTime) < lockingStep {
+	deadLock, err := parseDuration("1m")
+	lockValue, err := GetStoreValue(cof, &required, t)
+	if lockValue == "true" && time.Now().Sub(lockingTime) < deadLock {
 		return true, nil
+	}
+	err = SetStoreValue(cof, &required, t, "true")
+	if err != nil {
+		return false, err
 	}
 	return false, nil
 }
