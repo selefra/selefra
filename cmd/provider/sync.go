@@ -65,11 +65,11 @@ func Sync(lockCtx context.Context) (errLogs []string, err error) {
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
 		for {
+			time.Sleep(5 * time.Second)
 			locked, _ := tools.Locked(*p, *cof)
 			if !locked {
 				break
 			}
-			time.Sleep(5 * time.Second)
 			//ui.PrintWarningF(fmt.Sprintf("	%s@%s is locked, waiting for unlock...\n", p.Name, p.Version))
 		}
 		go tools.Lock(lockCtx, *p, *cof)
