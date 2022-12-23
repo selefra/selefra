@@ -237,6 +237,12 @@ func Locked(required config.ProviderRequired, cof config.SelefraConfig) (bool, e
 		return true, nil
 	}
 	err = SetStoreValue(cof, &required, t, "true")
+	time := time.Now().Format(time.RFC3339)
+	err = SetStoreValue(cof, &required, requireKey, time)
+	if err != nil {
+		return false, err
+	}
+	err = SetStoreValue(cof, &required, time, "true")
 	if err != nil {
 		return false, err
 	}
