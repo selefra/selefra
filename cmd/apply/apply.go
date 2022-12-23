@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/pkg/grpcClient"
-	"github.com/selefra/selefra/pkg/grpcClient/proto/issue"
+	issue "github.com/selefra/selefra/pkg/grpcClient/proto"
 	"io"
 	"os"
 	"path"
