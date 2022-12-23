@@ -4,20 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/pkg/grpcClient"
 	issue "github.com/selefra/selefra/pkg/grpcClient/proto"
+	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
-
-	"github.com/google/uuid"
-	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v3"
 
 	"github.com/selefra/selefra/cmd/provider"
 	"github.com/selefra/selefra/cmd/test"
@@ -92,11 +90,14 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-	lockCtx, cancel := context.WithCancel(context.Background())
-	_, err = provider.Sync(lockCtx)
+	_, lockArr, err := provider.Sync()
 	defer func() {
-		cancel()
-		time.Sleep(1 * time.Second)
+		for _, item := range lockArr {
+			err := item.Storage.UnLock(context.Background(), item.SchemaKey, item.Uuid)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+			}
+		}
 	}()
 	if err != nil {
 		if token != "" && s.Selefra.Cloud != nil && err == nil {

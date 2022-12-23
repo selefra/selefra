@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
+	"github.com/selefra/selefra-utils/pkg/id_util"
 	"github.com/selefra/selefra/cmd/fetch"
 	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
@@ -14,17 +16,23 @@ import (
 	"time"
 )
 
-func Sync(lockCtx context.Context) (errLogs []string, err error) {
+type lockStruct struct {
+	SchemaKey string
+	Uuid      string
+	Storage   *postgresql_storage.PostgresqlStorage
+}
+
+func Sync() (errLogs []string, lockSlice []lockStruct, err error) {
 	ui.PrintSuccessLn("Initializing provider plugins...\n")
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
 	err = cof.GetConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	namespace, _, err := utils.Home()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	provider := registry.NewProviderRegistry(namespace)
 	ui.PrintSuccessF("Selefra has been successfully installed providers!\n")
@@ -64,15 +72,28 @@ func Sync(lockCtx context.Context) (errLogs []string, err error) {
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
+		store, err := tools.GetStore(*cof, p)
+		if err != nil {
+			hasError = true
+			ui.PrintErrorF("%s@%s failed updated：%s", p.Name, p.Version, err.Error())
+			errLogs = append(errLogs, fmt.Sprintf("%s@%s failed updated：%s", p.Name, p.Version, err.Error()))
+			continue
+		}
+		ctx := context.Background()
+		uuid := id_util.RandomId()
+		schemaKey := config.GetSchemaKey(p)
 		for {
-			time.Sleep(5 * time.Second)
-			locked, _ := tools.Locked(*p, *cof)
-			if !locked {
+			err = store.Lock(ctx, schemaKey, uuid)
+			if err == nil {
 				break
 			}
-			//ui.PrintWarningF(fmt.Sprintf("	%s@%s is locked, waiting for unlock...\n", p.Name, p.Version))
+			time.Sleep(5 * time.Second)
 		}
-		go tools.Lock(lockCtx, *p, *cof)
+		lockSlice = append(lockSlice, lockStruct{
+			SchemaKey: schemaKey,
+			Uuid:      uuid,
+			Storage:   store,
+		})
 		need, _ := tools.NeedFetch(*p, *cof)
 		if !need {
 			continue
@@ -97,5 +118,5 @@ This may be exception, view detailed exception in %s .
 `, filepath.Join(*global.WORKSPACE, "logs"))
 	}
 
-	return errLogs, nil
+	return errLogs, lockSlice, nil
 }
