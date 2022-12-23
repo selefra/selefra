@@ -82,6 +82,10 @@ type LogJOSN struct {
 	Level string    `json:"level"`
 }
 
+func LogInfo(msg string) {
+	createLog(msg, InfoColor)
+}
+
 func createLog(msg string, c *color.Color) string {
 	var level string
 	switch c {

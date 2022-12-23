@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func Sync() (errLogs []string, err error) {
+func Sync(lockCtx context.Context) (errLogs []string, err error) {
 	ui.PrintSuccessLn("Initializing provider plugins...\n")
 	ctx := context.Background()
 	var cof = &config.SelefraConfig{}
@@ -64,6 +64,15 @@ func Sync() (errLogs []string, err error) {
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
+		for {
+			locked, _ := tools.Locked(*p, *cof)
+			if !locked {
+				break
+			}
+			time.Sleep(5 * time.Second)
+			ui.LogInfo(fmt.Sprintf("	%s@%s is locked, waiting for unlock...\n", p.Name, p.Version))
+		}
+		go tools.Lock(lockCtx, *p, *cof)
 		need, _ := tools.NeedFetch(*p, *cof)
 		if !need {
 			continue

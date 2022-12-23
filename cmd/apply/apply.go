@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/pkg/grpcClient"
-	issue "github.com/selefra/selefra/pkg/grpcClient/proto"
+	"github.com/selefra/selefra/pkg/grpcClient/proto/issue"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -64,7 +65,7 @@ func Apply(ctx context.Context) error {
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	ws.Init()
+	grpcClient.InitConn()
 	token, err := utils.GetCredentialsToken()
 	var taskUUId string
 	if token != "" && s.Selefra.Cloud != nil && err == nil {
@@ -91,7 +92,12 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-	_, err = provider.Sync()
+	lockCtx, cancel := context.WithCancel(context.Background())
+	_, err = provider.Sync(lockCtx)
+	defer func() {
+		cancel()
+		time.Sleep(1 * time.Second)
+	}()
 	if err != nil {
 		if token != "" && s.Selefra.Cloud != nil && err == nil {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
@@ -226,20 +232,18 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
 	var inClient issue.Issue_UploadIssueStreamClient
-	if global.LOGINTOKEN != "" {
-		gclient, conn, err := grpcClient.InitConn()
-		if conn != nil {
-			defer conn.Close()
-		}
-		if err != nil {
-			ui.PrintErrorLn("grpc error:" + err.Error())
-			return err
-		}
-		inClient, err = gclient.UploadIssueStream(ctx)
-		if err != nil {
-			ui.PrintErrorLn("grpc error:" + err.Error())
-			return err
-		}
+	gclient, conn, err := grpcClient.InitConn()
+	if conn != nil {
+		defer conn.Close()
+	}
+	if err != nil {
+		ui.PrintErrorLn("grpc error:" + err.Error())
+		return err
+	}
+	inClient, err = gclient.UploadIssueStream(ctx)
+	if err != nil {
+		ui.PrintErrorLn("grpc error:" + err.Error())
+		return err
 	}
 	for _, rule := range rules {
 		var variablesMap = make(map[string]interface{})

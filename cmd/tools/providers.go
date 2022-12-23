@@ -188,6 +188,47 @@ func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool
 	return false, nil
 }
 
+func Lock(ctx context.Context, provider config.ProviderRequired, cof config.SelefraConfig) error {
+	requireKey := config.GetLockKey()
+	var err error
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			Unlock(provider, cof)
+			return ctx.Err()
+		case <-ticker.C:
+			err = SetStoreValue(cof, &provider, requireKey, time.Now().Format(time.RFC3339))
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func Unlock(provider config.ProviderRequired, cof config.SelefraConfig) error {
+	requireKey := config.GetLockKey()
+	return SetStoreValue(cof, &provider, requireKey, "")
+}
+
+func Locked(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
+	requireKey := config.GetLockKey()
+	t, err := GetStoreValue(cof, &required, requireKey)
+	if err != nil {
+		return false, err
+	}
+	lockingTime, err := time.ParseInLocation(time.RFC3339, t, time.Local)
+	if err != nil {
+		return false, err
+	}
+	lockingStep, err := parseDuration("1m")
+	if time.Now().Sub(lockingTime) < lockingStep {
+		return true, nil
+	}
+	return false, nil
+}
+
 func parseDuration(d string) (time.Duration, error) {
 	d = strings.TrimSpace(d)
 	dr, err := time.ParseDuration(d)

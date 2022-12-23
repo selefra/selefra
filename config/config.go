@@ -256,6 +256,10 @@ func GetCacheKey() string {
 	return "update_time"
 }
 
+func GetLockKey() string {
+	return "lock_time"
+}
+
 func GetSchemaKey(required *ProviderRequired) string {
 	var pre string
 	if required == nil {
