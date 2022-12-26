@@ -1,0 +1,18 @@
+modules:
+  - name: Misconfigure-S3
+    uses:
+      - rules/s3/bucket_acl_publicly_readable.yaml
+      - rules/s3/bucket_acl_publicly_writeable.yaml
+      - rules/s3/bucket_allow_http_access.yaml
+      - rules/s3/bucket_default_encryption_disable.yaml
+      - rules/s3/bucket_is_not_configured_with_cors_rules.yaml
+      - rules/s3/bucket_logging_disable.yaml
+      - rules/s3/bucket_not_configured_block_public_access.yaml
+      - rules/s3/bucket_object_traversal_by_acl.yaml
+      - rules/s3/bucket_object_traversal_by_policy.yaml
+      - rules/s3/bucket_publicly_readable.yaml
+      - rules/s3/bucket_publicly_writeable.yaml
+      - rules/s3/bucket_source_ip_not_set.yaml
+      - rules/s3/bucket_versioning_is_disabled.yaml
+      - rules/s3/mfa_delete_is_disable.yaml
+      - rules/s3/the_target_bucket_for_server_access_logging_is_the_bucket_itself.yaml
