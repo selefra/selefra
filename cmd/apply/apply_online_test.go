@@ -11,7 +11,7 @@ func TestApplyOnLine(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 		return
 	}
-	global.LOGINTOKEN = "e21f9cfb7dd3ae3e85a2c96a04062a4a"
+	global.LOGINTOKEN = "8ddf8931d70601c04e60f79995507851"
 	*global.WORKSPACE = "../../tests/workspace/online"
 	err := Apply(context.Background())
 	if err != nil {

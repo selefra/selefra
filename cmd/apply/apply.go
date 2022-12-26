@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/pkg/grpcClient"
-	issue "github.com/selefra/selefra/pkg/grpcClient/proto"
+	"github.com/selefra/selefra/pkg/grpcClient/proto/issue"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
 	"io"
@@ -23,7 +23,6 @@ import (
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/httpClient"
 	"github.com/selefra/selefra/pkg/utils"
-	"github.com/selefra/selefra/pkg/ws"
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/client"
 )
@@ -63,9 +62,7 @@ func Apply(ctx context.Context) error {
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	ws.Init()
 	token, err := utils.GetCredentialsToken()
-	var taskUUId string
 	if token != "" && s.Selefra.Cloud != nil && err == nil {
 		if err != nil {
 			ui.PrintErrorLn("The token is invalid. Please execute selefra to log out or log in again")
@@ -80,12 +77,13 @@ func Apply(ctx context.Context) error {
 			return nil
 		}
 		taskRes, err := httpClient.CreateTask(token, s.Selefra.Cloud.Project)
-		if err == nil {
-			err := ws.Regis(token, taskRes.Data.TaskUUID)
-			if err != nil {
-				ui.PrintWarningLn(err.Error())
-			}
-			taskUUId = taskRes.Data.TaskUUID
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+		err = grpcClient.Cli.NewConn(token, taskRes.Data.TaskUUID)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
 		}
 	}
 	uid, _ := uuid.NewUUID()
@@ -129,7 +127,11 @@ func Apply(ctx context.Context) error {
 	} else {
 		project = ""
 	}
-
+	_, err = grpcClient.Cli.UploadLogStatus()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+	}
+	global.STAG = "infrastructure"
 	for i := range s.Selefra.Providers {
 		c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid, s.Selefra.Providers[i])
 		if e != nil {
@@ -139,7 +141,6 @@ func Apply(ctx context.Context) error {
 			ui.PrintErrorLn("Client creation error:" + e.Error())
 			return nil
 		}
-		global.STAG = "infrastructure"
 		modules, err := config.GetModulesByPath()
 		if err != nil {
 			if token != "" && s.Selefra.Cloud != nil && err == nil {
@@ -161,13 +162,17 @@ Loading Selefra analysis code ...
 
 		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
 		schema := config.GetSchemaKey(s.Selefra.Providers[i])
-		err = RunRules(ctx, s, c, project, taskUUId, mRules, schema)
+		err = RunRules(ctx, s, c, project, mRules, schema)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
 		}
 	}
 	if token != "" && s.Selefra.Cloud != nil {
+		_, err = grpcClient.Cli.UploadLogStatus()
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+		}
 		err = UploadWorkspace(project)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
@@ -231,21 +236,16 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 	return tables
 }
 
-func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project, taskUUId string, rules []config.Rule, schema string) error {
-	var inClient issue.Issue_UploadIssueStreamClient
-	gclient, conn, err := grpcClient.InitConn()
-	if conn != nil {
-		defer conn.Close()
-	}
-	if err != nil {
-		ui.PrintErrorLn("grpc error:" + err.Error())
-		return err
-	}
-	inClient, err = gclient.UploadIssueStream(ctx)
-	if err != nil {
-		ui.PrintErrorLn("grpc error:" + err.Error())
-		return err
-	}
+func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project string, rules []config.Rule, schema string) error {
+	inClient := grpcClient.Cli.GetIssueUploadIssueStreamClient()
+	defer func() {
+		if global.LOGINTOKEN != "" {
+			err := inClient.CloseSend()
+			if err != nil {
+				ui.PrintErrorLn("grpc completed error:" + err.Error())
+			}
+		}
+	}()
 	for _, rule := range rules {
 		var variablesMap = make(map[string]interface{})
 		for i := range s.Variables {
@@ -369,8 +369,8 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 					Metadata:    &outMetaData,
 					Labels:      outLabel,
 					ProjectName: project,
-					TaskUUID:    taskUUId,
-					Token:       global.LOGINTOKEN,
+					TaskUUID:    grpcClient.Cli.GetTaskID(),
+					Token:       grpcClient.Cli.GetToken(),
 				}
 				err = inClient.Send(&reqs)
 				if err != nil {
@@ -378,13 +378,6 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 					continue
 				}
 			}
-		}
-	}
-	if global.LOGINTOKEN != "" {
-		inClient.CloseSend()
-		err := ws.Completed()
-		if err != nil {
-			ui.PrintErrorLn("websocket completed error:" + err.Error())
 		}
 	}
 	return nil

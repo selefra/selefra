@@ -120,28 +120,6 @@ func SendLog(msg string) error {
 	return nil
 }
 
-func SendIssue(Action string, msg string) error {
-	if registerSuccess {
-		msg := connectMsg{
-			ActionName: Action,
-			Data:       msg,
-			Msg:        "",
-			BaseInfo: BaseConnectionInfo{
-				ID:         "",
-				Token:      Client.Token,
-				TaskId:     Client.TaskId,
-				RemoteType: "cli",
-			},
-		}
-		err := Client.WriteJsonLock(msg)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	return nil
-}
-
 func Regis(token, taskId string) error {
 	msg := connectMsg{
 		ActionName: Register,

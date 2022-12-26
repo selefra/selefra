@@ -9,6 +9,7 @@ import (
 	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
+	"github.com/selefra/selefra/pkg/grpcClient"
 	"github.com/selefra/selefra/pkg/registry"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
@@ -70,6 +71,10 @@ func Sync() (errLogs []string, lockSlice []lockStruct, err error) {
 	}
 
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
+	_, err = grpcClient.Cli.UploadLogStatus()
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+	}
 	global.STAG = "pull"
 	for _, p := range ProviderRequires {
 		store, err := tools.GetStore(*cof, p)
