@@ -1,5 +1,0 @@
-modules:
-  - name: AWS_Security_Demo
-    uses:
-      #    - selefra/aws/modules.yaml
-      - ./rules/iam_mfa.yaml

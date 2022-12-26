@@ -1,5 +1,0 @@
-modules:
-  - name: AWS_Security_Demo
-    uses:
-    - selefra/rules-aws-misconfigure-s3/module.yaml
-    - ./modules/module2.yaml
