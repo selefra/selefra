@@ -96,7 +96,7 @@ func CliHttpClient[T any](method, url string, info interface{}) (*Res[T], error)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(method, "http://"+global.SERVER+url, bytes.NewReader(bytesData))
+	req, err := http.NewRequest(method, "https://"+global.SERVER+url, bytes.NewReader(bytesData))
 	if err != nil {
 		return nil, err
 	}

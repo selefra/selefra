@@ -25,13 +25,19 @@ import (
 
 func main() {
 	defer func() {
-		if grpcClient.Cli.GetLogUploadLogStreamClient() != nil {
-			err := grpcClient.Cli.GetIssueUploadIssueStreamClient().CloseSend()
-			log.Fatalf("fail to close issue stream:%s", err.Error())
+		logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
+		conn := grpcClient.Cli.GetConn()
+		if logCli != nil {
+			err := logCli.CloseSend()
+			if err != nil {
+				log.Fatalf("fail to close issue stream:%s", err.Error())
+			}
 		}
-		if grpcClient.Cli.GetConn() != nil {
-			err := grpcClient.Cli.GetConn().Close()
-			log.Fatalf("fail to close grpc conn:%s", err.Error())
+		if conn != nil {
+			err := conn.Close()
+			if err != nil {
+				log.Fatalf("fail to close grpc conn:%s", err.Error())
+			}
 		}
 		if err := recover(); err != nil {
 			ui.PrintErrorF("Panic: %v\n%s", err, debug.Stack())

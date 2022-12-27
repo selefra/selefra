@@ -187,8 +187,7 @@ func PrintInfoLn(a ...interface{}) {
 	PrintCustomizeLn(InfoColor, a...)
 }
 
-func sendMsg(c *color.Color, logCli log.Log_UploadLogStreamClient, format string, a ...interface{}) error {
-	msg := fmt.Sprintf(format, a...)
+func sendMsg(c *color.Color, logCli log.Log_UploadLogStreamClient, msg string) error {
 	step++
 	createLog(msg, c)
 	if c == ErrorColor {
@@ -216,7 +215,8 @@ func sendMsg(c *color.Color, logCli log.Log_UploadLogStreamClient, format string
 func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
 	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
 	if logCli != nil {
-		err := sendMsg(c, logCli, format, a)
+		msg := fmt.Sprintf(format, a...)
+		err := sendMsg(c, logCli, msg)
 		if err != nil {
 			createLog("grpc logStream error:"+err.Error(), ErrorColor)
 		}
@@ -227,7 +227,8 @@ func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
 func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
 	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
 	if logCli != nil {
-		err := sendMsg(c, logCli, format, a)
+		msg := fmt.Sprintf(format, a...)
+		err := sendMsg(c, logCli, msg)
 		if err != nil {
 			createLog("grpc logStream error:"+err.Error(), ErrorColor)
 		}
@@ -238,7 +239,7 @@ func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
 func PrintCustomizeLn(c *color.Color, a ...interface{}) {
 	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
 	if logCli != nil {
-		str := fmt.Sprint(a)
+		str := fmt.Sprint(a...)
 		err := sendMsg(c, logCli, str)
 		if err != nil {
 			createLog("grpc logStream error:"+err.Error(), ErrorColor)
