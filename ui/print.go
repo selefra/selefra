@@ -248,11 +248,10 @@ func PrintCustomizeLn(c *color.Color, a ...interface{}) {
 	_, _ = c.Println(a...)
 }
 
-func PrintCustomizeLnNotShow(a ...interface{}) {
+func PrintCustomizeLnNotShow(a string) {
 	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
 	if logCli != nil {
-		str := fmt.Sprint(a)
-		err := sendMsg(InfoColor, logCli, str)
+		err := sendMsg(InfoColor, logCli, a)
 		if err != nil {
 			createLog("grpc logStream error:"+err.Error(), ErrorColor)
 		}
