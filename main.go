@@ -27,6 +27,7 @@ func main() {
 	defer func() {
 		logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
 		conn := grpcClient.Cli.GetConn()
+		ui.PrintSuccessLn("Selefra exit")
 		if logCli != nil {
 			err := logCli.CloseSend()
 			log.Println("close log stream", err)
@@ -42,9 +43,8 @@ func main() {
 			}
 		}
 		if err := recover(); err != nil {
-			ui.PrintErrorF("Panic: %v\n%s", err, debug.Stack())
+			log.Fatalf("Panic: %v\n%s", err, debug.Stack())
 		}
-		ui.PrintSuccessLn("Selefra exit")
 	}()
 	cmd.Execute()
 }

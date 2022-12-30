@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/cmd/provider"
@@ -240,20 +241,26 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan issue.Req) {
 	for {
 		select {
 		case req := <-IssueReq:
+			if inClient == nil {
+				continue
+			}
 			err := inClient.Send(&req)
 			if err != nil {
 				ui.PrintErrorF("send issue to server error: %s", err.Error())
 				return
 			}
 		case <-ctx.Done():
-			inClient.CloseSend()
+			fmt.Println("issue upload success")
+			if inClient != nil {
+				inClient.CloseSend()
+			}
 			return
 		}
 	}
 }
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project string, rules []config.Rule, schema string) error {
-	issueCtx := context.Background()
+	issueCtx, issueCancel := context.WithCancel(context.Background())
 	issueChan := make(chan issue.Req, 100)
 	go UploadIssueFunc(issueCtx, issueChan)
 	for _, rule := range rules {
@@ -386,7 +393,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 			}
 		}
 	}
-	issueCtx.Done()
+	issueCancel()
 	return nil
 }
 
