@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -241,6 +242,7 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 	defer func() {
 		if global.LOGINTOKEN != "" {
 			err := inClient.CloseSend()
+			log.Println("close send")
 			if err != nil {
 				ui.PrintErrorLn("grpc completed error:" + err.Error())
 			}
