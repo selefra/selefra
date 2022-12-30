@@ -44,6 +44,7 @@ func main() {
 		if err := recover(); err != nil {
 			ui.PrintErrorF("Panic: %v\n%s", err, debug.Stack())
 		}
+		ui.PrintSuccessLn("Selefra exit")
 	}()
 	cmd.Execute()
 }
