@@ -6,26 +6,24 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
+	"github.com/selefra/selefra/cmd/provider"
+	"github.com/selefra/selefra/cmd/test"
+	"github.com/selefra/selefra/config"
+	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/grpcClient"
 	"github.com/selefra/selefra/pkg/grpcClient/proto/issue"
+	"github.com/selefra/selefra/pkg/httpClient"
+	"github.com/selefra/selefra/pkg/utils"
+	"github.com/selefra/selefra/ui"
+	"github.com/selefra/selefra/ui/client"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
-
-	"github.com/selefra/selefra/cmd/provider"
-	"github.com/selefra/selefra/cmd/test"
-	"github.com/selefra/selefra/config"
-	"github.com/selefra/selefra/global"
-	"github.com/selefra/selefra/pkg/httpClient"
-	"github.com/selefra/selefra/pkg/utils"
-	"github.com/selefra/selefra/ui"
-	"github.com/selefra/selefra/ui/client"
 )
 
 func NewApplyCmd() *cobra.Command {
@@ -237,17 +235,27 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 	return tables
 }
 
-func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project string, rules []config.Rule, schema string) error {
+func UploadIssueFunc(ctx context.Context, IssueReq <-chan issue.Req) {
 	inClient := grpcClient.Cli.GetIssueUploadIssueStreamClient()
-	defer func() {
-		if global.LOGINTOKEN != "" {
-			err := inClient.CloseSend()
-			log.Println("close send")
+	for {
+		select {
+		case req := <-IssueReq:
+			err := inClient.Send(&req)
 			if err != nil {
-				ui.PrintErrorLn("grpc completed error:" + err.Error())
+				ui.PrintErrorF("send issue to server error: %s", err.Error())
+				return
 			}
+		case <-ctx.Done():
+			inClient.CloseSend()
+			return
 		}
-	}()
+	}
+}
+
+func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project string, rules []config.Rule, schema string) error {
+	issueCtx := context.Background()
+	issueChan := make(chan issue.Req, 100)
+	go UploadIssueFunc(issueCtx, issueChan)
 	for _, rule := range rules {
 		var variablesMap = make(map[string]interface{})
 		for i := range s.Variables {
@@ -374,14 +382,11 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 					TaskUUID:    grpcClient.Cli.GetTaskID(),
 					Token:       grpcClient.Cli.GetToken(),
 				}
-				err = inClient.Send(&reqs)
-				if err != nil {
-					ui.PrintErrorLn(err.Error())
-					continue
-				}
+				issueChan <- reqs
 			}
 		}
 	}
+	issueCtx.Done()
 	return nil
 }
 

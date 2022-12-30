@@ -8,10 +8,8 @@ import (
 	glog "github.com/selefra/selefra/pkg/grpcClient/proto/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"strings"
-	"time"
 )
 
 type grpcCli struct {
@@ -52,12 +50,7 @@ func (g *grpcCli) getDial() string {
 }
 
 func (g *grpcCli) NewConn(token, taskId string) error {
-	var kacp = keepalive.ClientParameters{
-		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
-		Timeout:             time.Second,      // wait 1 second for ping ack before considering the connection dead
-		PermitWithoutStream: true,             // send pings even without active streams
-	}
-	conn, err := grpc.Dial(g.getDial(), grpc.WithKeepaliveParams(kacp), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(g.getDial(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("fail to dial: %v", err)
 	}
