@@ -182,6 +182,10 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		}
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
+	if errorsN > 0 {
+		ui.PrintErrorF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
+		return nil
+	}
 	ui.PrintSuccessF("\nPull complete! Total Resources pulled:%d        Errors: %d\n", success, errorsN)
 	return nil
 }

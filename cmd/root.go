@@ -12,6 +12,7 @@ import (
 	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/cmd/version"
 	"github.com/spf13/cobra"
+	"log"
 	"os"
 	"strings"
 )
@@ -34,6 +35,7 @@ If you like selefra, give us a star https://github.com/selefra/selefra
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		log.Printf("Error occurred in Execute: %+v", err)
 		os.Exit(1)
 	}
 }

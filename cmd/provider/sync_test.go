@@ -7,7 +7,7 @@ import (
 
 func TestSync(t *testing.T) {
 	*global.WORKSPACE = "../../tests/workspace/offline"
-	errLogs, err := Sync()
+	errLogs, _, err := Sync()
 	if err != nil {
 		t.Error(err)
 	}

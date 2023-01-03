@@ -41,6 +41,7 @@ type CliProviders struct {
 	Cache         string   `yaml:"cache" json:"cache"`
 	MaxGoroutines uint64   `yaml:"max_goroutines" json:"max_goroutines"`
 	Resources     []string `yaml:"resources" json:"resources"`
+	LogLevel      string   `yaml:"log_level" json:"log_level"`
 }
 
 func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
@@ -253,6 +254,10 @@ func GetAllConfig(dirname string, fileMap FileMap) (FileMap, error) {
 
 func GetCacheKey() string {
 	return "update_time"
+}
+
+func GetLockKey() string {
+	return "lock_time"
 }
 
 func GetSchemaKey(required *ProviderRequired) string {

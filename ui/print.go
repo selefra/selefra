@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/selefra/selefra/pkg/grpcClient"
+	"github.com/selefra/selefra/pkg/grpcClient/proto/log"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"os"
 	"runtime"
 	"strings"
@@ -15,8 +18,9 @@ import (
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/logger"
-	"github.com/selefra/selefra/pkg/ws"
 )
+
+var step int32 = 0
 
 var defaultLogger, _ = logger.NewLogger(logger.Config{
 	FileLogEnabled:    true,
@@ -82,7 +86,7 @@ type LogJOSN struct {
 	Level string    `json:"level"`
 }
 
-func createLog(msg string, c *color.Color) string {
+func getLevel(c *color.Color) string {
 	var level string
 	switch c {
 	case ErrorColor:
@@ -97,12 +101,16 @@ func createLog(msg string, c *color.Color) string {
 		level = "base"
 	default:
 	}
+	return level
+}
+
+func createLog(msg string, c *color.Color) string {
 	l := LogJOSN{
 		Cmd:   global.CMD,
 		Stag:  global.STAG,
 		Msg:   msg,
 		Time:  time.Now(),
-		Level: level,
+		Level: getLevel(c),
 	}
 	b, err := json.Marshal(l)
 	if err != nil {
@@ -130,7 +138,6 @@ func PrintWarningF(format string, a ...interface{}) {
 		defaultLogger.Log(hclog.Warn, format, a...)
 	}
 	PrintCustomizeF(WarningColor, format, a...)
-
 }
 
 func PrintSuccessF(format string, a ...interface{}) {
@@ -180,23 +187,75 @@ func PrintInfoLn(a ...interface{}) {
 	PrintCustomizeLn(InfoColor, a...)
 }
 
+func sendMsg(c *color.Color, logCli log.Log_UploadLogStreamClient, msg string) error {
+	step++
+	createLog(msg, c)
+	if c == ErrorColor {
+		grpcClient.Cli.SetStatus("error")
+	}
+	err := logCli.Send(&log.ConnectMsg{
+		ActionName: "",
+		Data: &log.LogJOSN{
+			Cmd:   global.CMD,
+			Stag:  global.STAG,
+			Msg:   msg,
+			Time:  timestamppb.Now(),
+			Level: getLevel(c),
+		},
+		Index: step,
+		Msg:   "",
+		BaseInfo: &log.BaseConnectionInfo{
+			Token:  grpcClient.Cli.GetToken(),
+			TaskId: grpcClient.Cli.GetTaskID(),
+		},
+	})
+	return err
+}
+
 func PrintCustomizeF(c *color.Color, format string, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
+	if logCli != nil {
+		msg := fmt.Sprintf(format, a...)
+		err := sendMsg(c, logCli, msg)
+		if err != nil {
+			createLog("grpc logStream error:"+err.Error(), ErrorColor)
+		}
+	}
 	_, _ = c.Printf(format+"\n", a...)
 }
 
 func PrintCustomizeFNotN(c *color.Color, format string, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintf(format, a...), c))
+	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
+	if logCli != nil {
+		msg := fmt.Sprintf(format, a...)
+		err := sendMsg(c, logCli, msg)
+		if err != nil {
+			createLog("grpc logStream error:"+err.Error(), ErrorColor)
+		}
+	}
 	_, _ = c.Printf(format, a...)
 }
 
 func PrintCustomizeLn(c *color.Color, a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintln(a...), c))
+	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
+	if logCli != nil {
+		str := fmt.Sprint(a...)
+		err := sendMsg(c, logCli, str)
+		if err != nil {
+			createLog("grpc logStream error:"+err.Error(), ErrorColor)
+		}
+	}
 	_, _ = c.Println(a...)
 }
 
-func PrintCustomizeLnNotShow(a ...interface{}) {
-	ws.SendLog(createLog(fmt.Sprintln(a...), InfoColor))
+func PrintCustomizeLnNotShow(a string) {
+	logCli := grpcClient.Cli.GetLogUploadLogStreamClient()
+	if logCli != nil {
+		err := sendMsg(InfoColor, logCli, a)
+		if err != nil {
+			createLog("grpc logStream error:"+err.Error(), ErrorColor)
+		}
+	}
 }
 
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {

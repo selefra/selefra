@@ -1,0 +1,48 @@
+syntax = "proto3";
+package log;
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "proto/log";
+
+message BaseConnectionInfo {
+  string Token = 1;
+  string TaskId = 2;
+}
+
+
+message LogJOSN {
+  string Cmd = 1;
+  string Stag = 2;
+  string Msg = 3;
+  google.protobuf.Timestamp Time = 4;
+  string Level = 5;
+}
+
+message ConnectMsg {
+  string  ActionName = 1;
+  LogJOSN Data = 2;
+  int32 index = 3;
+  string Msg = 4;
+  BaseConnectionInfo BaseInfo = 5;
+}
+
+message StatusInfo {
+  BaseConnectionInfo BaseInfo = 1;
+  string Stag = 2;
+  string Status = 3;  // 开始，成功，失败
+  google.protobuf.Timestamp Time = 4;
+}
+
+
+message Res {
+  int32 Code = 1;
+  string Msg = 2;
+  google.protobuf.Any Data = 3;
+}
+
+service Log{
+  rpc UploadLogStream(stream ConnectMsg)returns (Res){};
+  rpc UploadLogStatus(StatusInfo)returns (Res){};
+  rpc GetLogStream(BaseConnectionInfo)returns (stream ConnectMsg){};
+}

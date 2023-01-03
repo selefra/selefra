@@ -2,7 +2,7 @@ selefra:
     cloud:
         project: testProject
         organization: cliOnlie
-        hostname: dev-api.selefra.io
+        hostname: 192.168.0.68:58018
     name: testProject
     cli_version: '{{version}}'
     providers:
@@ -11,7 +11,6 @@ selefra:
           version: latest
 providers:
     - name: aws
-      cache: 1d
       resources:
         - aws_s3_buckets
         - aws_s3_accounts
