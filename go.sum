@@ -508,8 +508,8 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/songzhibin97/gkit v1.2.7 h1:Z5GJs8jysk4pEer/bSeo49Xh/iAGXz9dZfiZSPyfRy8=
-github.com/songzhibin97/gkit v1.2.7/go.mod h1:fqP08z5X5p1rdYCoxTtovvDQ91wcWsablOuMPVqQHEc=
+github.com/songzhibin97/gkit v1.2.8 h1:4lGW03cPCe1ym+PtZsvTQ+qHjXOVoUtPmxD3YvGTx0I=
+github.com/songzhibin97/gkit v1.2.8/go.mod h1:fqP08z5X5p1rdYCoxTtovvDQ91wcWsablOuMPVqQHEc=
 github.com/songzhibin97/go-ognl v0.0.3-0.20220831071354-b4f21269f576 h1:qOM453XbsWqNGCz0rKpCK852Ut8h9VCMdZqhfAf8KSw=
 github.com/songzhibin97/go-ognl v0.0.3-0.20220831071354-b4f21269f576/go.mod h1:0tuH6BQ4cHgQaQ2Ch4XpJILNqvQDnGcE9NObPY6rFOM=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=

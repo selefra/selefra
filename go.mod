@@ -19,7 +19,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/selefra/selefra-provider-sdk v0.0.16
 	github.com/selefra/selefra-utils v0.0.2
-	github.com/songzhibin97/gkit v1.2.7
+	github.com/songzhibin97/gkit v1.2.8
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	github.com/vbauerster/mpb/v7 v7.5.3
