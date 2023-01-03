@@ -236,7 +236,7 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 	return tables
 }
 
-func UploadIssueFunc(ctx context.Context, IssueReq <-chan issue.Req) {
+func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req) {
 	inClient := grpcClient.Cli.GetIssueUploadIssueStreamClient()
 	for {
 		select {
@@ -244,7 +244,7 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan issue.Req) {
 			if inClient == nil {
 				continue
 			}
-			err := inClient.Send(&req)
+			err := inClient.Send(req)
 			if err != nil {
 				ui.PrintErrorF("send issue to server error: %s", err.Error())
 				return
@@ -261,7 +261,8 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan issue.Req) {
 
 func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, project string, rules []config.Rule, schema string) error {
 	issueCtx, issueCancel := context.WithCancel(context.Background())
-	issueChan := make(chan issue.Req, 100)
+	defer issueCancel()
+	issueChan := make(chan *issue.Req, 100)
 	go UploadIssueFunc(issueCtx, issueChan)
 	for _, rule := range rules {
 		var variablesMap = make(map[string]interface{})
@@ -389,11 +390,10 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 					TaskUUID:    grpcClient.Cli.GetTaskID(),
 					Token:       grpcClient.Cli.GetToken(),
 				}
-				issueChan <- reqs
+				issueChan <- &reqs
 			}
 		}
 	}
-	issueCancel()
 	return nil
 }
 
