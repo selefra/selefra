@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.149
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/containerd/containerd v1.6.10
+	github.com/containerd/containerd v1.6.12
 	github.com/fatih/color v1.13.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/google/uuid v1.3.0
@@ -27,7 +27,7 @@ require (
 	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v3 v3.0.1
-	oras.land/oras-go v1.2.1
+	oras.land/oras-go v1.2.2
 )
 
 require (
@@ -92,7 +92,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/term v0.0.0-20221120202655-abb19827d345 // indirect
+	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
@@ -120,12 +120,12 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/crypto v0.3.0 // indirect
+	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/mod v0.6.0 // indirect
-	golang.org/x/net v0.2.0 // indirect
+	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.2.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.103.0 // indirect
