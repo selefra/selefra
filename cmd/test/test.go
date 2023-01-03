@@ -17,6 +17,7 @@ import (
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/client"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"os"
 )
 
@@ -71,9 +72,22 @@ func checkConfig(ctx context.Context, c config.SelefraConfig) error {
 	}
 	uid, _ := uuid.NewUUID()
 	for i := range c.Selefra.Providers {
-		_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid, c.Selefra.Providers[i])
-		if e != nil {
-			return e
+		confs, err := tools.GetProviders(&c, c.Selefra.Providers[i].Name)
+		if err != nil {
+			ui.PrintErrorLn(err.Error())
+			return nil
+		}
+		for _, conf := range confs {
+			var cp config.CliProviders
+			err := yaml.Unmarshal([]byte(conf), &cp)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+			_, e := client.CreateClientFromConfig(ctx, &c.Selefra, uid, c.Selefra.Providers[i], cp)
+			if e != nil {
+				return e
+			}
 		}
 	}
 
@@ -106,57 +120,65 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 			ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
 			continue
 		}
-		conf, err := tools.GetProviders(&s, p.Name)
+		confs, err := tools.GetProviders(&s, p.Name)
 		if err != nil {
 			hasError = true
 			ui.PrintErrorLn(err.Error())
 			continue
 		}
-
-		storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN())
-		opt, err := json.Marshal(storage)
-
-		provider := plug.Provider()
-		initRes, err := provider.Init(ctx, &shard.ProviderInitRequest{
-			Workspace: global.WORKSPACE,
-			Storage: &shard.Storage{
-				Type:           0,
-				StorageOptions: opt,
-			},
-			IsInstallInit:  pointer.FalsePointer(),
-			ProviderConfig: pointer.ToStringPointer(string(conf)),
-		})
-		if err != nil {
-			hasError = true
-			ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
-			continue
-		} else {
-			if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
-				ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+		for _, conf := range confs {
+			var cp config.CliProviders
+			err := yaml.Unmarshal([]byte(conf), &cp)
+			if err != nil {
 				hasError = true
+				ui.PrintErrorLn(err.Error())
 				continue
 			}
-		}
+			storage := postgresql_storage.NewPostgresqlStorageOptions(s.Selefra.GetDSN())
+			opt, err := json.Marshal(storage)
 
-		res, err := provider.SetProviderConfig(ctx, &shard.SetProviderConfigRequest{
-			Storage: &shard.Storage{
-				Type:           0,
-				StorageOptions: opt,
-			},
-			ProviderConfig: pointer.ToStringPointer(string(conf)),
-		})
-		if err != nil {
-			ui.PrintErrorLn(err.Error())
-			hasError = true
-			continue
-		} else {
-			if res.Diagnostics != nil && res.Diagnostics.HasError() {
-				ui.PrintDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+			provider := plug.Provider()
+			initRes, err := provider.Init(ctx, &shard.ProviderInitRequest{
+				Workspace: global.WORKSPACE,
+				Storage: &shard.Storage{
+					Type:           0,
+					StorageOptions: opt,
+				},
+				IsInstallInit:  pointer.FalsePointer(),
+				ProviderConfig: pointer.ToStringPointer(conf),
+			})
+			if err != nil {
+				hasError = true
+				ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
+				continue
+			} else {
+				if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
+					ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+					hasError = true
+					continue
+				}
+			}
+
+			res, err := provider.SetProviderConfig(ctx, &shard.SetProviderConfigRequest{
+				Storage: &shard.Storage{
+					Type:           0,
+					StorageOptions: opt,
+				},
+				ProviderConfig: pointer.ToStringPointer(conf),
+			})
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
 				hasError = true
 				continue
+			} else {
+				if res.Diagnostics != nil && res.Diagnostics.HasError() {
+					ui.PrintDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+					hasError = true
+					continue
+				}
 			}
+			ui.PrintSuccessF("	%s %s@%s check successfully", cp.Name, providersName, p.Version)
 		}
-		ui.PrintSuccessF("	%s@%s check successfully", providersName, p.Version)
 	}
 
 	ui.PrintSuccessF("\nProviders verification completed\n")

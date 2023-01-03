@@ -16,6 +16,7 @@ import (
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/progress"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
@@ -39,9 +40,15 @@ func NewFetchCmd() *cobra.Command {
 			}
 			ui.PrintSuccessF("Selefra start fetch")
 			for _, p := range cof.Selefra.Providers {
-				err = Fetch(ctx, cof, p)
+				confs, err := tools.GetProviders(cof, p.Name)
 				if err != nil {
 					return err
+				}
+				for i := range confs {
+					err = Fetch(ctx, cof, p, confs[i])
+					if err != nil {
+						return err
+					}
 				}
 			}
 
@@ -57,7 +64,7 @@ This may be exception, view detailed exception in %s.`,
 	return cmd
 }
 
-func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired) error {
+func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired, conf string) error {
 	if p.Path == "" {
 		p.Path = utils.GetPathBySource(*p.Source)
 	}
@@ -70,7 +77,12 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	schema := config.GetSchemaKey(p)
+	var cp config.CliProviders
+	err = yaml.Unmarshal([]byte(conf), &cp)
+	if err != nil {
+		return err
+	}
+	schema := config.GetSchemaKey(p, cp)
 	storageOpt.SearchPath = schema
 	opt, err := json.Marshal(storageOpt)
 	if err != nil {
@@ -78,11 +90,6 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	err = cof.GetConfig()
 
-	conf, err := tools.GetProviders(cof, providersName)
-
-	if err != nil {
-		return err
-	}
 	provider := plug.Provider()
 	initRes, err := provider.Init(ctx, &shard.ProviderInitRequest{
 		Workspace: global.WORKSPACE,
@@ -123,10 +130,6 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		return errors.New("fetch provider create table error")
 	}
 	var tables []string
-	cp, err := cof.GetProvider(p.Name)
-	if err != nil {
-		return err
-	}
 	resources := cp.Resources
 	if len(resources) == 0 {
 		tables = append(tables, "*")
@@ -163,22 +166,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			}
 			return err
 		}
-		successNum := 0
-		errorsNum := 0
-		for _, value := range res.FinishedTables {
-			if value {
-				successNum++
-			} else {
-				errorsNum++
-			}
-		}
-		success = successNum
-		errorsN = errorsNum
 		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
 		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
 		total = int64(res.TableCount)
-		if res.Diagnostics != nil && res.Diagnostics.HasError() {
-			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+		if res.Diagnostics != nil {
+			if res.Diagnostics.HasError() {
+				_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+				success++
+			} else {
+				errorsN++
+			}
 		}
 	}
 	progbar.Wait(p.Name + "@" + p.Version)

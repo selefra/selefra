@@ -2,7 +2,9 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/ui"
@@ -10,10 +12,10 @@ import (
 	"testing"
 )
 
-func createCtxAndClient(cof config.SelefraConfig, required *config.ProviderRequired) (context.Context, *client.Client, error) {
+func createCtxAndClient(cof config.SelefraConfig, required *config.ProviderRequired, cp config.CliProviders) (context.Context, *client.Client, error) {
 	uid, _ := uuid.NewUUID()
 	ctx := context.Background()
-	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, required)
+	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, required, cp)
 	if e != nil {
 		ui.PrintErrorLn(e)
 		return nil, nil, e
@@ -29,13 +31,25 @@ func TestCreateColumnsSuggest(t *testing.T) {
 		ui.PrintErrorLn(err)
 	}
 	for i := range cof.Selefra.Providers {
-		ctx, c, err := createCtxAndClient(*cof, cof.Selefra.Providers[i])
+		confs, err := tools.GetProviders(cof, cof.Selefra.Providers[i].Name)
 		if err != nil {
-			t.Error(err)
+			ui.PrintErrorLn(err.Error())
 		}
-		columns := CreateColumnsSuggest(ctx, c)
-		if columns == nil {
-			t.Error("Columns is nil")
+		for _, conf := range confs {
+			var cp config.CliProviders
+			err := json.Unmarshal([]byte(conf), &cp)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+			ctx, c, err := createCtxAndClient(*cof, cof.Selefra.Providers[i], cp)
+			if err != nil {
+				t.Error(err)
+			}
+			columns := CreateColumnsSuggest(ctx, c)
+			if columns == nil {
+				t.Error("Columns is nil")
+			}
 		}
 	}
 }
@@ -48,13 +62,25 @@ func TestCreateTablesSuggest(t *testing.T) {
 		ui.PrintErrorLn(err)
 	}
 	for i := range cof.Selefra.Providers {
-		ctx, c, err := createCtxAndClient(*cof, cof.Selefra.Providers[i])
+		confs, err := tools.GetProviders(cof, cof.Selefra.Providers[i].Name)
 		if err != nil {
-			t.Error(err)
+			ui.PrintErrorLn(err.Error())
 		}
-		tables := CreateTablesSuggest(ctx, c)
-		if tables == nil {
-			t.Error("Tables is nil")
+		for _, conf := range confs {
+			var cp config.CliProviders
+			err := json.Unmarshal([]byte(conf), &cp)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+			ctx, c, err := createCtxAndClient(*cof, cof.Selefra.Providers[i], cp)
+			if err != nil {
+				t.Error(err)
+			}
+			tables := CreateTablesSuggest(ctx, c)
+			if tables == nil {
+				t.Error("Tables is nil")
+			}
 		}
 	}
 }

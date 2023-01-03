@@ -38,31 +38,17 @@ var typeMap = map[string]bool{
 }
 
 type CliProviders struct {
+	Name          string   `yaml:"name" json:"name"`
 	Cache         string   `yaml:"cache" json:"cache"`
 	MaxGoroutines uint64   `yaml:"max_goroutines" json:"max_goroutines"`
 	Resources     []string `yaml:"resources" json:"resources"`
 	LogLevel      string   `yaml:"log_level" json:"log_level"`
 }
 
-func (c *SelefraConfig) GetProvider(name string) (CliProviders, error) {
+func (c *SelefraConfig) GetProvider(conf string) (CliProviders, error) {
 	var cp CliProviders
-	for _, group := range c.Providers.Content {
-		for i, node := range group.Content {
-			if node.Kind == yaml.ScalarNode && node.Value == "name" && group.Content[i+1].Value == name {
-				b, err := yaml.Marshal(group)
-				if err != nil {
-					ui.PrintErrorLn(err.Error())
-					return cp, err
-				}
-				err = yaml.Unmarshal(b, &cp)
-				if err != nil {
-					ui.PrintErrorLn(err.Error())
-					return cp, err
-				}
-			}
-		}
-	}
-	return cp, nil
+	err := json.Unmarshal([]byte(conf), &cp)
+	return cp, err
 }
 
 type Variable struct {
@@ -256,11 +242,7 @@ func GetCacheKey() string {
 	return "update_time"
 }
 
-func GetLockKey() string {
-	return "lock_time"
-}
-
-func GetSchemaKey(required *ProviderRequired) string {
+func GetSchemaKey(required *ProviderRequired, cp CliProviders) string {
 	var pre string
 	if required == nil {
 		return pre + "public"
@@ -269,7 +251,7 @@ func GetSchemaKey(required *ProviderRequired) string {
 	source := strings.Replace(sourceArr[1], "/", "_", -1)
 	source = strings.Replace(source, "@", "_", -1)
 	source = strings.Replace(source, ".", "", -1)
-	s := source + "_" + required.Name
+	s := source + "_" + cp.Name
 	return pre + s
 }
 
