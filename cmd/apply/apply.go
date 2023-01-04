@@ -88,6 +88,16 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
+
+	err = test.CheckSelefraConfig(ctx, s)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		if token != "" && s.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+		}
+		return nil
+	}
+
 	_, lockArr, err := provider.Sync()
 	defer func() {
 		for _, item := range lockArr {
@@ -102,14 +112,6 @@ func Apply(ctx context.Context) error {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
 		}
 		ui.PrintErrorLn(err.Error())
-		return nil
-	}
-	err = test.CheckSelefraConfig(ctx, s)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		if token != "" && s.Selefra.Cloud != nil && err == nil {
-			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-		}
 		return nil
 	}
 	err = s.GetConfig()
