@@ -62,13 +62,13 @@ jobs:
             dist/*.zip
             dist/*.tar.gz
 
-      - uses: keithweaver/aws-s3-github-action@v1.0.0
-        name: Copy Folder
-        with:
-          command: cp
-          source: ./dist/
-          destination: s3://dev-www.selefra.io/app-selefra/
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: us-east-1
-          flags: --recursive
+      # - uses: keithweaver/aws-s3-github-action@v1.0.0
+      #   name: Copy Folder
+      #   with:
+      #     command: cp
+      #     source: ./dist/
+      #     destination: s3://dev-www.selefra.io/app-selefra/
+      #     aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws_region: us-east-1
+      #     flags: --recursive
