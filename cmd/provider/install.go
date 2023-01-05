@@ -127,8 +127,8 @@ func install(ctx context.Context, args []string) error {
 			return nil
 		}
 
-		if initRes != nil && initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
-			ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+		if initRes != nil && initRes.Diagnostics != nil {
+			_ = ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
 			return nil
 		}
 

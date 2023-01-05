@@ -65,11 +65,17 @@ This may be exception, view detailed exception in %s.`,
 }
 
 func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired, conf string) error {
+	var cp config.CliProviders
+	err := yaml.Unmarshal([]byte(conf), &cp)
+	if err != nil {
+		return err
+	}
+
 	if p.Path == "" {
 		p.Path = utils.GetPathBySource(*p.Source)
 	}
 	var providersName = utils.GetNameBySource(*p.Source)
-	ui.PrintSuccessF("%s@%s pull infrastructure data:\n", providersName, p.Version)
+	ui.PrintSuccessF("%s %s@%s pull infrastructure data:\n", cp.Name, providersName, p.Version)
 	ui.PrintCustomizeLnNotShow(fmt.Sprintf("Pulling %s@%s Please wait for resource information ...", providersName, p.Version))
 	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
@@ -77,11 +83,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	var cp config.CliProviders
-	err = yaml.Unmarshal([]byte(conf), &cp)
-	if err != nil {
-		return err
-	}
+
 	schema := config.GetSchemaKey(p, cp)
 	storageOpt.SearchPath = schema
 	opt, err := json.Marshal(storageOpt)
@@ -103,7 +105,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	if err != nil {
 		return err
 	} else {
-		if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
+		if initRes.Diagnostics != nil {
 			ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
 			return errors.New("fetch provider init error")
 		}
@@ -115,9 +117,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	if dropRes.Diagnostics != nil && dropRes.Diagnostics.HasError() {
-		ui.PrintDiagnostic(dropRes.Diagnostics.GetDiagnosticSlice())
-		return errors.New("fetch provider drop table error")
+	if dropRes.Diagnostics != nil {
+		err := ui.PrintDiagnostic(dropRes.Diagnostics.GetDiagnosticSlice())
+		if err != nil {
+			return errors.New("fetch provider drop table error")
+		}
 	}
 
 	createRes, err := provider.CreateAllTables(ctx, &shard.ProviderCreateAllTablesRequest{})
@@ -125,9 +129,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	if createRes.Diagnostics != nil && createRes.Diagnostics.HasError() {
-		ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
-		return errors.New("fetch provider create table error")
+	if createRes.Diagnostics != nil {
+		err := ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
+		if err != nil {
+			return errors.New("fetch provider create table error")
+		}
 	}
 	var tables []string
 	resources := cp.Resources
@@ -171,10 +177,10 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		total = int64(res.TableCount)
 		if res.Diagnostics != nil {
 			if res.Diagnostics.HasError() {
-				_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
-				success++
-			} else {
 				errorsN++
+				ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+			} else {
+				success++
 			}
 		}
 	}

@@ -36,7 +36,6 @@ func NewApplyCmd() *cobra.Command {
 	}
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
-
 	return cmd
 }
 
@@ -51,6 +50,7 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 }
 
 func Apply(ctx context.Context) error {
+
 	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
@@ -283,12 +283,12 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 		queryStr, err := fmtTemplate(rule.Query, variablesMap)
 		res, diag := c.Storage.Query(ctx, queryStr)
-		if diag != nil && diag.HasError() {
+		if diag != nil {
 			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 			continue
 		}
 		table, diag := res.ReadRows(-1)
-		if diag != nil && diag.HasError() {
+		if diag != nil {
 			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 			continue
 		}
@@ -312,8 +312,9 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		ui.PrintSuccessLn("Policy:")
 		schemaTables, schemaDiag := c.Storage.TableList(ctx, schema)
 		if schemaDiag != nil {
-			if schemaDiag.HasError() {
-				return ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			err := ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			if err != nil {
+				return err
 			}
 		}
 		var tableMap = make(map[string]bool)

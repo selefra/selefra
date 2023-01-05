@@ -132,9 +132,11 @@ func GetStore(cof config.SelefraConfig, provider *config.ProviderRequired, conf 
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
 	storageOpt.SearchPath = config.GetSchemaKey(provider, cp)
 	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
-	if diag != nil && diag.HasError() {
+	if diag != nil {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	stoLogger, err := ui.StoLogger()
 	if err != nil {
@@ -151,9 +153,11 @@ func GetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, 
 		return "", err
 	}
 	t, diag := store.GetValue(context.Background(), key)
-	if diag != nil && diag.HasError() {
+	if diag != nil {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return "", err
+		if err != nil {
+			return "", err
+		}
 	}
 	return t, nil
 }
@@ -164,9 +168,11 @@ func SetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, 
 		return err
 	}
 	diag := store.SetKey(context.Background(), key, value)
-	if diag != nil && diag.HasError() {
+	if diag != nil {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -115,6 +115,7 @@ type Config struct {
 	Cloud      *Cloud              `yaml:"cloud" mapstructure:"cloud"`
 	Name       string              `yaml:"name" mapstructure:"name"`
 	CliVersion string              `yaml:"cli_version" mapstructure:"cli_version"`
+	LogLevel   string              `yaml:"log_level" mapstructure:"log_level"`
 	Providers  []*ProviderRequired `yaml:"providers" mapstructure:"providers"`
 	Connection *DB                 `yaml:"connection" mapstructure:"connection"`
 }
@@ -790,6 +791,7 @@ func (c *SelefraConfig) TestConfigByNode() error {
 		selefraMap["cli_version"] = nil
 		selefraMap["name"] = nil
 		selefraMap["connection"] = new(yaml.Node)
+		selefraMap["log_level"] = new(yaml.Node)
 		selefraMap["providers"] = nil
 		bodyNode := new(yaml.Node)
 		err := yaml.Unmarshal([]byte(configStr), bodyNode)
@@ -946,6 +948,7 @@ func (c *SelefraConfig) GetConfigWithViper() (*viper.Viper, error) {
 	if err != nil {
 		return nil, err
 	}
+	global.ChangeLevel(c.Selefra.LogLevel)
 	global.SERVER = c.Selefra.GetHostName()
 	return config, nil
 }

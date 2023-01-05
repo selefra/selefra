@@ -59,14 +59,14 @@ func (q *QueryClient) completer(d prompt.Document) []prompt.Suggest {
 }
 
 func CreateTablesSuggest(ctx context.Context, c *client.Client) []prompt.Suggest {
-	res, err := c.Storage.Query(ctx, TABLESQL)
+	res, diag := c.Storage.Query(ctx, TABLESQL)
 	tables := []prompt.Suggest{}
-	if err != nil && err.HasError() {
-		ui.PrintDiagnostic(err.GetDiagnosticSlice())
+	if diag != nil {
+		_ = ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 	} else {
-		rows, err := res.ReadRows(-1)
-		if err != nil && err.HasError() {
-			ui.PrintDiagnostic(err.GetDiagnosticSlice())
+		rows, diag := res.ReadRows(-1)
+		if diag != nil {
+			_ = ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 		}
 		for i := range rows.GetMatrix() {
 			tableName := rows.GetMatrix()[i][0].(string)
@@ -79,12 +79,12 @@ func CreateTablesSuggest(ctx context.Context, c *client.Client) []prompt.Suggest
 func CreateColumnsSuggest(ctx context.Context, c *client.Client) []prompt.Suggest {
 	res, err := c.Storage.Query(ctx, COLUMNSQL)
 	columns := []prompt.Suggest{}
-	if err != nil && err.HasError() {
-		ui.PrintDiagnostic(err.GetDiagnosticSlice())
+	if err != nil {
+		_ = ui.PrintDiagnostic(err.GetDiagnosticSlice())
 	} else {
 		rows, err := res.ReadRows(-1)
-		if err != nil && err.HasError() {
-			ui.PrintDiagnostic(err.GetDiagnosticSlice())
+		if err != nil {
+			_ = ui.PrintDiagnostic(err.GetDiagnosticSlice())
 		}
 		for i := range rows.GetMatrix() {
 			schemaName := rows.GetMatrix()[i][0].(string)

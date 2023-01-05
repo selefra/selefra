@@ -152,9 +152,11 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 				ui.PrintErrorF("%s@%s verification failed ：%s", providersName, p.Version, err.Error())
 				continue
 			} else {
-				if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
-					ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
-					hasError = true
+				if initRes.Diagnostics != nil {
+					err := ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+					if err != nil {
+						hasError = true
+					}
 					continue
 				}
 			}
@@ -171,9 +173,11 @@ func CheckSelefraConfig(ctx context.Context, s config.SelefraConfig) error {
 				hasError = true
 				continue
 			} else {
-				if res.Diagnostics != nil && res.Diagnostics.HasError() {
-					ui.PrintDiagnostic(res.Diagnostics.GetDiagnosticSlice())
-					hasError = true
+				if res.Diagnostics != nil {
+					err := ui.PrintDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+					if err != nil {
+						hasError = true
+					}
 					continue
 				}
 			}
