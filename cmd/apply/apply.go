@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/cmd/provider"
-	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
@@ -89,15 +88,6 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
-
-	err = test.CheckSelefraConfig(ctx, s)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		if token != "" && s.Selefra.Cloud != nil && err == nil {
-			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-		}
-		return nil
-	}
 
 	_, lockArr, err := provider.Sync()
 	defer func() {

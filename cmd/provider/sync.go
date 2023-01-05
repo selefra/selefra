@@ -6,10 +6,12 @@ import (
 	"github.com/selefra/selefra-provider-sdk/storage/database_storage/postgresql_storage"
 	"github.com/selefra/selefra-utils/pkg/id_util"
 	"github.com/selefra/selefra/cmd/fetch"
+	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/grpcClient"
+	"github.com/selefra/selefra/pkg/httpClient"
 	"github.com/selefra/selefra/pkg/registry"
 	"github.com/selefra/selefra/pkg/utils"
 	"github.com/selefra/selefra/ui"
@@ -72,6 +74,16 @@ func Sync() (errLogs []string, lockSlice []lockStruct, err error) {
 	}
 
 	ui.PrintSuccessF("Selefra has been finished update providers!\n")
+
+	err = test.CheckSelefraConfig(ctx, *cof)
+	if err != nil {
+		ui.PrintErrorLn(err.Error())
+		if global.LOGINTOKEN != "" && cof.Selefra.Cloud != nil && err == nil {
+			_ = httpClient.SetupStag(global.LOGINTOKEN, cof.Selefra.Cloud.Project, httpClient.Failed)
+		}
+		return nil, nil, err
+	}
+
 	_, err = grpcClient.Cli.UploadLogStatus()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
