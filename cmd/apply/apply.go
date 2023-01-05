@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 func NewApplyCmd() *cobra.Command {
@@ -265,6 +266,12 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req) {
 				ui.PrintErrorF("send issue to server error: %s", err.Error())
 				return
 			}
+		case <-time.After(time.Second * 30):
+			ui.PrintErrorF("send issue to server error: timeout")
+			if inClient != nil {
+				inClient.CloseSend()
+			}
+			return
 		case <-ctx.Done():
 			if inClient != nil {
 				inClient.CloseSend()
