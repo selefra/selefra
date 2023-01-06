@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.149
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/containerd/containerd v1.6.10
+	github.com/containerd/containerd v1.6.15
 	github.com/fatih/color v1.13.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/google/uuid v1.3.0
