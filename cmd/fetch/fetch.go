@@ -183,7 +183,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			}
 		}
 		success = len(res.FinishedTables)
-		errorsN = int(int64(res.TableCount) - int64(len(res.FinishedTables)))
+		errorsN = 0
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
 	if errorsN > 0 {

@@ -130,7 +130,6 @@ func NewManagedPlugin(filepath string, name string, version string, alias string
 	cmd := exec.Command(filepath)
 	cmd.Env = append(cmd.Env, env...)
 	client := plugin.NewClient(&plugin.ClientConfig{
-		Stderr:           os.Stderr,
 		SyncStdout:       os.Stdout,
 		SyncStderr:       os.Stderr,
 		HandshakeConfig:  serve.HandSharkConfig,
