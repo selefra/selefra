@@ -106,8 +106,10 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		return err
 	} else {
 		if initRes.Diagnostics != nil {
-			ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
-			return errors.New("fetch provider init error")
+			err := ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+			if err != nil {
+				return errors.New("fetch provider init error")
+			}
 		}
 	}
 

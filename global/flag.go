@@ -10,7 +10,7 @@ var LOGINTOKEN = ""
 var ORGNAME = ""
 var CMD = ""
 var STAG = ""
-var LOGLEVEL = "debug"
+var LOGLEVEL = "error"
 var levelMap = map[string]bool{
 	"trace":   true,
 	"debug":   true,

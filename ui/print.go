@@ -274,7 +274,11 @@ func PrintCustomizeLnNotShow(a string) {
 }
 
 func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) {
-	_ = PrintDiagnostic(diagnostics)
+	for i := range diagnostics {
+		if int(diagnostics[i].Level()) >= levelMap[global.LOGLEVEL] {
+			defaultLogger.Log(hclog.Level(levelMap[global.LOGLEVEL]+1), diagnostics[i].Content())
+		}
+	}
 }
 
 func PrintDiagnostic(diagnostics []*schema.Diagnostic) error {
