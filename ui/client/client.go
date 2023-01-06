@@ -22,7 +22,7 @@ type Client struct {
 	instanceId    uuid.UUID
 }
 
-func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId uuid.UUID, provider *config.ProviderRequired) (*Client, error) {
+func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId uuid.UUID, provider *config.ProviderRequired, cp config.CliProviders) (*Client, error) {
 
 	hub := new(interface{})
 	pm := new(interface{})
@@ -36,12 +36,14 @@ func CreateClientFromConfig(ctx context.Context, cfg *config.Config, instanceId 
 	}
 	if cfg.GetDSN() != "" {
 		options := postgres.NewPostgresqlStorageOptions(cfg.GetDSN())
-		schema := config.GetSchemaKey(provider)
+		schema := config.GetSchemaKey(provider, cp)
 		options.SearchPath = schema
-		sto, err := storage_factory.NewStorage(ctx, storage_factory.StorageTypePostgresql, options)
-		if err != nil && err.HasError() {
-			ui.PrintDiagnostic(err.GetDiagnosticSlice())
-			return nil, errors.New("failed to create storage")
+		sto, diag := storage_factory.NewStorage(ctx, storage_factory.StorageTypePostgresql, options)
+		if diag != nil {
+			err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+			if err != nil {
+				return nil, errors.New("failed to create storage")
+			}
 		}
 		c.Storage = sto
 	}

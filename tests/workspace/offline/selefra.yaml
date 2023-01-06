@@ -6,8 +6,9 @@ selefra:
           source: selefra/aws@latest
           version: latest
 providers:
-    - name: aws
+    - name: aws_01
       cache: 1d
+      provider: aws
       resources:
 #        - aws_s3_buckets
 #        - aws_s3_accounts

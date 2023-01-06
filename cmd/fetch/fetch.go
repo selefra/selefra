@@ -16,6 +16,7 @@ import (
 	"github.com/selefra/selefra/ui"
 	"github.com/selefra/selefra/ui/progress"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
@@ -39,9 +40,15 @@ func NewFetchCmd() *cobra.Command {
 			}
 			ui.PrintSuccessF("Selefra start fetch")
 			for _, p := range cof.Selefra.Providers {
-				err = Fetch(ctx, cof, p)
+				confs, err := tools.GetProviders(cof, p.Name)
 				if err != nil {
 					return err
+				}
+				for i := range confs {
+					err = Fetch(ctx, cof, p, confs[i])
+					if err != nil {
+						return err
+					}
 				}
 			}
 
@@ -57,12 +64,18 @@ This may be exception, view detailed exception in %s.`,
 	return cmd
 }
 
-func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired) error {
+func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderRequired, conf string) error {
+	var cp config.CliProviders
+	err := yaml.Unmarshal([]byte(conf), &cp)
+	if err != nil {
+		return err
+	}
+
 	if p.Path == "" {
 		p.Path = utils.GetPathBySource(*p.Source)
 	}
 	var providersName = utils.GetNameBySource(*p.Source)
-	ui.PrintSuccessF("%s@%s pull infrastructure data:\n", providersName, p.Version)
+	ui.PrintSuccessF("%s %s@%s pull infrastructure data:\n", cp.Name, providersName, p.Version)
 	ui.PrintCustomizeLnNotShow(fmt.Sprintf("Pulling %s@%s Please wait for resource information ...", providersName, p.Version))
 	plug, err := plugin.NewManagedPlugin(p.Path, providersName, p.Version, "", nil)
 	if err != nil {
@@ -70,7 +83,8 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 
 	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	schema := config.GetSchemaKey(p)
+
+	schema := config.GetSchemaKey(p, cp)
 	storageOpt.SearchPath = schema
 	opt, err := json.Marshal(storageOpt)
 	if err != nil {
@@ -78,11 +92,6 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	}
 	err = cof.GetConfig()
 
-	conf, err := tools.GetProviders(cof, providersName)
-
-	if err != nil {
-		return err
-	}
 	provider := plug.Provider()
 	initRes, err := provider.Init(ctx, &shard.ProviderInitRequest{
 		Workspace: global.WORKSPACE,
@@ -96,9 +105,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 	if err != nil {
 		return err
 	} else {
-		if initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
-			ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
-			return errors.New("fetch provider init error")
+		if initRes.Diagnostics != nil {
+			err := ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+			if err != nil {
+				return errors.New("fetch provider init error")
+			}
 		}
 	}
 
@@ -108,9 +119,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	if dropRes.Diagnostics != nil && dropRes.Diagnostics.HasError() {
-		ui.PrintDiagnostic(dropRes.Diagnostics.GetDiagnosticSlice())
-		return errors.New("fetch provider drop table error")
+	if dropRes.Diagnostics != nil {
+		err := ui.PrintDiagnostic(dropRes.Diagnostics.GetDiagnosticSlice())
+		if err != nil {
+			return errors.New("fetch provider drop table error")
+		}
 	}
 
 	createRes, err := provider.CreateAllTables(ctx, &shard.ProviderCreateAllTablesRequest{})
@@ -118,15 +131,13 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		ui.PrintErrorLn(err.Error())
 		return err
 	}
-	if createRes.Diagnostics != nil && createRes.Diagnostics.HasError() {
-		ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
-		return errors.New("fetch provider create table error")
+	if createRes.Diagnostics != nil {
+		err := ui.PrintDiagnostic(createRes.Diagnostics.GetDiagnosticSlice())
+		if err != nil {
+			return errors.New("fetch provider create table error")
+		}
 	}
 	var tables []string
-	cp, err := cof.GetProvider(p.Name)
-	if err != nil {
-		return err
-	}
 	resources := cp.Resources
 	if len(resources) == 0 {
 		tables = append(tables, "*")
@@ -163,23 +174,16 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 			}
 			return err
 		}
-		successNum := 0
-		errorsNum := 0
-		for _, value := range res.FinishedTables {
-			if value {
-				successNum++
-			} else {
-				errorsNum++
-			}
-		}
-		success = successNum
-		errorsN = errorsNum
 		progbar.SetTotal(p.Name+"@"+p.Version, int64(res.TableCount))
 		progbar.Current(p.Name+"@"+p.Version, int64(len(res.FinishedTables)), res.Table)
 		total = int64(res.TableCount)
-		if res.Diagnostics != nil && res.Diagnostics.HasError() {
-			_ = ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+		if res.Diagnostics != nil {
+			if res.Diagnostics.HasError() {
+				ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
+			}
 		}
+		success = len(res.FinishedTables)
+		errorsN = int(int64(res.TableCount) - int64(len(res.FinishedTables)))
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
 	if errorsN > 0 {

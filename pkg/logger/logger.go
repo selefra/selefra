@@ -33,7 +33,7 @@ func (l *Logger) Log(level hclog.Level, msg string, args ...interface{}) {
 	case hclog.Warn:
 		l.Warn(msg, args...)
 	case hclog.Error:
-		l.Warn(msg, args...)
+		l.Error(msg, args...)
 	}
 }
 
@@ -255,7 +255,11 @@ func NewLogger(c Config) (*Logger, error) {
 	if err != nil {
 		return nil, nil
 	}
-	logger := zap.New(zapcore.NewTee(c.GetEncoderCore()...))
+	errorStack := zap.AddStacktrace(zap.ErrorLevel)
+
+	development := zap.Development()
+
+	logger := zap.New(zapcore.NewTee(c.GetEncoderCore()...), errorStack, development)
 
 	if c.ShowLine {
 		logger = logger.WithOptions(zap.AddCaller())

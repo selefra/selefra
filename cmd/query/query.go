@@ -31,7 +31,7 @@ func NewQueryCmd() *cobra.Command {
 				return
 			}
 			uid, _ := uuid.NewUUID()
-			c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil)
+			c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil, config.CliProviders{})
 			if e != nil {
 				ui.PrintErrorLn(e)
 				return

@@ -20,6 +20,24 @@ import (
 	"github.com/selefra/selefra/pkg/logger"
 )
 
+var levelMap = map[string]int{
+	"trace":   0,
+	"debug":   1,
+	"info":    2,
+	"warning": 3,
+	"error":   4,
+	"fatal":   5,
+}
+
+var levelColor = []*color.Color{
+	InfoColor,
+	InfoColor,
+	InfoColor,
+	WarningColor,
+	ErrorColor,
+	ErrorColor,
+}
+
 var step int32 = 0
 
 var defaultLogger, _ = logger.NewLogger(logger.Config{
@@ -75,7 +93,6 @@ var (
 	WarningColor = color.New(color.FgYellow, color.Bold)
 	InfoColor    = color.New(color.FgWhite, color.Bold)
 	SuccessColor = color.New(color.FgGreen, color.Bold)
-	BaseColor    = color.New(color.FgBlack, color.Bold)
 )
 
 type LogJOSN struct {
@@ -97,8 +114,6 @@ func getLevel(c *color.Color) string {
 		level = "info"
 	case SuccessColor:
 		level = "success"
-	case BaseColor:
-		level = "base"
 	default:
 	}
 	return level
@@ -258,81 +273,23 @@ func PrintCustomizeLnNotShow(a string) {
 	}
 }
 
-func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) error {
-	var err error
+func SaveLogToDiagnostic(diagnostics []*schema.Diagnostic) {
 	for i := range diagnostics {
-		switch diagnostics[i].Level() {
-		case schema.DiagnosisLevelError:
-			_, f, l, ok := runtime.Caller(1)
-			if ok {
-				if defaultLogger != nil {
-					defaultLogger.Log(hclog.Error, "%s %s:%d", diagnostics[i].Content(), f, l)
-				}
-			}
-			err = errors.New(diagnostics[i].Content())
-		case schema.DiagnosisLevelWarn:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Warn, diagnostics[i].Content())
-			}
-		case schema.DiagnosisLevelInfo:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
-			}
-		case schema.DiagnosisLevelDebug:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Debug, diagnostics[i].Content())
-			}
-		case schema.DiagnosisLevelTrace:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Trace, diagnostics[i].Content())
-			}
-		case schema.DiagnosisLevelFatal:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
-			}
+		if int(diagnostics[i].Level()) >= levelMap[global.LOGLEVEL] {
+			defaultLogger.Log(hclog.Level(levelMap[global.LOGLEVEL]+1), diagnostics[i].Content())
 		}
 	}
-	return err
 }
 
 func PrintDiagnostic(diagnostics []*schema.Diagnostic) error {
 	var err error
 	for i := range diagnostics {
-		switch diagnostics[i].Level() {
-		case schema.DiagnosisLevelError:
-			_, f, l, ok := runtime.Caller(1)
-			if ok {
-				if defaultLogger != nil {
-					defaultLogger.Log(hclog.Error, "%s %s:%d", diagnostics[i].Content(), f, l)
-				}
+		if int(diagnostics[i].Level()) >= levelMap[global.LOGLEVEL] {
+			defaultLogger.Log(hclog.Level(levelMap[global.LOGLEVEL]+1), diagnostics[i].Content())
+			PrintCustomizeLn(levelColor[int(diagnostics[i].Level())], diagnostics[i].Content())
+			if diagnostics[i].Level() == schema.DiagnosisLevelError {
+				err = errors.New(diagnostics[i].Content())
 			}
-			PrintCustomizeLn(ErrorColor, diagnostics[i].Content())
-			err = errors.New(diagnostics[i].Content())
-		case schema.DiagnosisLevelWarn:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Warn, diagnostics[i].Content())
-			}
-			PrintWarningLn(diagnostics[i].Content())
-		case schema.DiagnosisLevelInfo:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
-			}
-			PrintInfoLn(diagnostics[i].Content())
-		case schema.DiagnosisLevelDebug:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Debug, diagnostics[i].Content())
-			}
-			PrintSuccessLn(diagnostics[i].Content())
-		case schema.DiagnosisLevelTrace:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Trace, diagnostics[i].Content())
-			}
-			PrintInfoLn(diagnostics[i].Content())
-		case schema.DiagnosisLevelFatal:
-			if defaultLogger != nil {
-				defaultLogger.Log(hclog.Info, diagnostics[i].Content())
-			}
-			PrintErrorLn(diagnostics[i].Content())
 		}
 	}
 	return err

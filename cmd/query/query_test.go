@@ -20,7 +20,7 @@ func TestNewQueryClient(t *testing.T) {
 	}
 	uid, _ := uuid.NewUUID()
 	ctx := context.Background()
-	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil)
+	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil, config.CliProviders{})
 	if e != nil {
 		ui.PrintErrorLn(e)
 		return
@@ -44,7 +44,7 @@ func TestNewQueryClientOnline(t *testing.T) {
 	}
 	uid, _ := uuid.NewUUID()
 	ctx := context.Background()
-	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil)
+	c, e := client.CreateClientFromConfig(ctx, &cof.Selefra, uid, nil, config.CliProviders{})
 	if e != nil {
 		ui.PrintErrorLn(e)
 		return

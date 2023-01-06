@@ -30,14 +30,12 @@ func main() {
 		ui.PrintSuccessLn("Selefra exit")
 		if logCli != nil {
 			err := logCli.CloseSend()
-			log.Println("close log stream", err)
 			if err != nil {
 				log.Fatalf("fail to close issue stream:%s", err.Error())
 			}
 		}
 		if conn != nil {
 			err := conn.Close()
-			log.Println("close grpc connection")
 			if err != nil {
 				log.Fatalf("fail to close grpc conn:%s", err.Error())
 			}

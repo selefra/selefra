@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/selefra/selefra-provider-sdk/provider/schema"
 	"github.com/selefra/selefra/cmd/provider"
-	"github.com/selefra/selefra/cmd/test"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/grpcClient"
@@ -25,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 func NewApplyCmd() *cobra.Command {
@@ -36,7 +36,6 @@ func NewApplyCmd() *cobra.Command {
 	}
 
 	cmd.SetHelpFunc(cmd.HelpFunc())
-
 	return cmd
 }
 
@@ -51,6 +50,7 @@ func applyFunc(cmd *cobra.Command, args []string) error {
 }
 
 func Apply(ctx context.Context) error {
+
 	err := config.IsSelefra()
 	if err != nil {
 		ui.PrintErrorLn(err.Error())
@@ -88,6 +88,7 @@ func Apply(ctx context.Context) error {
 	}
 	uid, _ := uuid.NewUUID()
 	global.STAG = "initializing"
+
 	_, lockArr, err := provider.Sync()
 	defer func() {
 		for _, item := range lockArr {
@@ -102,14 +103,6 @@ func Apply(ctx context.Context) error {
 			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
 		}
 		ui.PrintErrorLn(err.Error())
-		return nil
-	}
-	err = test.CheckSelefraConfig(ctx, s)
-	if err != nil {
-		ui.PrintErrorLn(err.Error())
-		if token != "" && s.Selefra.Cloud != nil && err == nil {
-			_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-		}
 		return nil
 	}
 	err = s.GetConfig()
@@ -133,39 +126,53 @@ func Apply(ctx context.Context) error {
 	}
 	global.STAG = "infrastructure"
 	for i := range s.Selefra.Providers {
-		c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid, s.Selefra.Providers[i])
-		if e != nil {
-			if token != "" && s.Selefra.Cloud != nil && err == nil {
-				_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-			}
-			ui.PrintErrorLn("Client creation error:" + e.Error())
-			return nil
-		}
-		modules, err := config.GetModulesByPath()
-		if err != nil {
-			if token != "" && s.Selefra.Cloud != nil && err == nil {
-				err = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
-			}
-			ui.PrintErrorLn("Client creation error:" + err.Error())
-			return nil
-		}
-		var mRules []config.Rule
-		ui.PrintSuccessLn(`----------------------------------------------------------------------------------------------
-
-Loading Selefra analysis code ...
-`)
-		if len(modules) == 0 {
-			mRules = *RunRulesWithoutModule()
-		} else {
-			mRules = CreateRulesByModule(modules)
-		}
-
-		ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
-		schema := config.GetSchemaKey(s.Selefra.Providers[i])
-		err = RunRules(ctx, s, c, project, mRules, schema)
+		confs, err := tools.GetProviders(&s, s.Selefra.Providers[i].Name)
 		if err != nil {
 			ui.PrintErrorLn(err.Error())
 			return nil
+		}
+		for _, conf := range confs {
+			var cp config.CliProviders
+			err := yaml.Unmarshal([]byte(conf), &cp)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				continue
+			}
+			c, e := client.CreateClientFromConfig(ctx, &s.Selefra, uid, s.Selefra.Providers[i], cp)
+			if e != nil {
+				if token != "" && s.Selefra.Cloud != nil && err == nil {
+					_ = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+				}
+				ui.PrintErrorLn("Client creation error:" + e.Error())
+				return nil
+			}
+			modules, err := config.GetModulesByPath()
+			if err != nil {
+				if token != "" && s.Selefra.Cloud != nil && err == nil {
+					err = httpClient.SetupStag(token, s.Selefra.Cloud.Project, httpClient.Failed)
+				}
+				ui.PrintErrorLn("Client creation error:" + err.Error())
+				return nil
+			}
+			var mRules []config.Rule
+			ui.PrintSuccessLn(`----------------------------------------------------------------------------------------------
+
+Loading Selefra analysis code ...
+`)
+			if len(modules) == 0 {
+				mRules = *RunRulesWithoutModule()
+			} else {
+				mRules = CreateRulesByModule(modules)
+			}
+
+			ui.PrintSuccessF("\n---------------------------------- Result for rules  ----------------------------------------\n")
+
+			schema := config.GetSchemaKey(s.Selefra.Providers[i], cp)
+			err = RunRules(ctx, s, c, project, mRules, schema)
+			if err != nil {
+				ui.PrintErrorLn(err.Error())
+				return nil
+			}
 		}
 	}
 	if token != "" && s.Selefra.Cloud != nil {
@@ -249,8 +256,13 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req) {
 				ui.PrintErrorF("send issue to server error: %s", err.Error())
 				return
 			}
+		case <-time.After(time.Second * 30):
+			ui.PrintErrorF("send issue to server error: timeout")
+			if inClient != nil {
+				inClient.CloseSend()
+			}
+			return
 		case <-ctx.Done():
-			fmt.Println("issue upload success")
 			if inClient != nil {
 				inClient.CloseSend()
 			}
@@ -271,12 +283,12 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		}
 		queryStr, err := fmtTemplate(rule.Query, variablesMap)
 		res, diag := c.Storage.Query(ctx, queryStr)
-		if diag != nil && diag.HasError() {
+		if diag != nil {
 			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 			continue
 		}
 		table, diag := res.ReadRows(-1)
-		if diag != nil && diag.HasError() {
+		if diag != nil {
 			ui.PrintDiagnostic(diag.GetDiagnosticSlice())
 			continue
 		}
@@ -300,8 +312,9 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 		ui.PrintSuccessLn("Policy:")
 		schemaTables, schemaDiag := c.Storage.TableList(ctx, schema)
 		if schemaDiag != nil {
-			if schemaDiag.HasError() {
-				return ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			err := ui.PrintDiagnostic(schemaDiag.GetDiagnosticSlice())
+			if err != nil {
+				return err
 			}
 		}
 		var tableMap = make(map[string]bool)

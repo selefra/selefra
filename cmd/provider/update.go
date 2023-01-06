@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"github.com/selefra/selefra/cmd/fetch"
+	"github.com/selefra/selefra/cmd/tools"
 	"github.com/selefra/selefra/config"
 	"github.com/selefra/selefra/global"
 	"github.com/selefra/selefra/pkg/registry"
@@ -73,9 +74,15 @@ func update(ctx context.Context, args []string) error {
 		}
 		p.Path = pp.Filepath
 		p.Version = pp.Version
-		err = fetch.Fetch(ctx, cof, p)
+		confs, err := tools.GetProviders(cof, p.Name)
 		if err != nil {
 			return err
+		}
+		for _, c := range confs {
+			err = fetch.Fetch(ctx, cof, p, c)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

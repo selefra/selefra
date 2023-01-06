@@ -11,6 +11,7 @@ import (
 	"github.com/selefra/selefra/cmd/query"
 	"github.com/selefra/selefra/cmd/test"
 	"github.com/selefra/selefra/cmd/version"
+	"github.com/selefra/selefra/global"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -29,6 +30,10 @@ Selefra - Infrastructure data as Code
 For details see the selefra document https://selefra.io/docs
 If you like selefra, give us a star https://github.com/selefra/selefra
 `,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		level, _ := cmd.Flags().GetString("loglevel")
+		global.ChangeLevel(level)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -41,6 +46,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringP("loglevel", "l", "debug", "log level")
 	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.test.yaml)")
 	group["main"] = []*cobra.Command{
 		initCmd.NewInitCmd(),
@@ -59,8 +65,6 @@ func init() {
 
 	rootCmd.AddCommand(group["main"]...)
 	rootCmd.AddCommand(group["other"]...)
-
-	rootCmd.Flags()
 
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		fmt.Println(strings.TrimSpace(cmd.Long))

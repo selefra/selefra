@@ -51,11 +51,13 @@ func CreateYaml(cmd *cobra.Command) (*config.SelefraConfig, error) {
 	storage := postgresql_storage.NewPostgresqlStorageOptions(configYaml.Selefra.GetDSN())
 
 	_, diag := postgresql_storage.NewPostgresqlStorage(ctx, storage)
-	if diag != nil && diag.HasError() {
-		ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return &configYaml, errors.New(`The database maybe not ready.
+	if diag != nil {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+		if err != nil {
+			return &configYaml, errors.New(`The database maybe not ready.
 		You can execute the following command to install the official database image.
 		docker run --name selefra_postgres -p 5432:5432 -e POSTGRES_PASSWORD=pass -d postgres\n`)
+		}
 	}
 	var prov []string
 	ui.PrintInfoLn("Getting provider list...")
@@ -159,8 +161,11 @@ func CreateYaml(cmd *cobra.Command) (*config.SelefraConfig, error) {
 		if err != nil {
 			return &configYaml, err
 		}
-		if initRes != nil && initRes.Diagnostics != nil && initRes.Diagnostics.HasError() {
-			return &configYaml, ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+		if initRes != nil && initRes.Diagnostics != nil {
+			err := ui.PrintDiagnostic(initRes.Diagnostics.GetDiagnosticSlice())
+			if err != nil {
+				return &configYaml, err
+			}
 		}
 
 		res, err := plugProvider.GetProviderInformation(ctx, &shard.GetProviderInformationRequest{})

@@ -16,17 +16,21 @@ import (
 	"time"
 )
 
-func GetProviders(config *config.SelefraConfig, key string) (string, error) {
-	var seleferMap = make(map[string][]*yaml.Node)
+func GetProviders(config *config.SelefraConfig, key string) ([]string, error) {
+	var providerConfs []string
 	for _, group := range config.Providers.Content {
 		for i, node := range group.Content {
-			if node.Kind == yaml.ScalarNode && node.Value == "name" && group.Content[i+1].Value == key {
-				seleferMap["providers"] = append(seleferMap["providers"], group)
+			if node.Kind == yaml.ScalarNode && node.Value == "provider" && group.Content[i+1].Value == key {
+				b, err := yaml.Marshal(group)
+				if err != nil {
+					return nil, err
+				}
+				providerConfs = append(providerConfs, string(b))
+
 			}
 		}
 	}
-	b, err := yaml.Marshal(seleferMap)
-	return string(b), err
+	return providerConfs, nil
 }
 
 func SetProviders(DefaultConfigTemplate string, provider registry.ProviderBinary, config *config.SelefraConfig) error {
@@ -119,13 +123,20 @@ func SetSelefraProvider(provider registry.ProviderBinary, selefraConfig *config.
 	return nil
 }
 
-func GetStore(cof config.SelefraConfig, provider *config.ProviderRequired) (*postgresql_storage.PostgresqlStorage, error) {
-	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
-	storageOpt.SearchPath = config.GetSchemaKey(provider)
-	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
-	if diag != nil && diag.HasError() {
-		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+func GetStore(cof config.SelefraConfig, provider *config.ProviderRequired, conf string) (*postgresql_storage.PostgresqlStorage, error) {
+	var cp config.CliProviders
+	err := yaml.Unmarshal([]byte(conf), &cp)
+	if err != nil {
 		return nil, err
+	}
+	storageOpt := postgresql_storage.NewPostgresqlStorageOptions(cof.Selefra.GetDSN())
+	storageOpt.SearchPath = config.GetSchemaKey(provider, cp)
+	store, diag := postgresql_storage.NewPostgresqlStorage(context.Background(), storageOpt)
+	if diag != nil {
+		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
+		if err != nil {
+			return nil, err
+		}
 	}
 	stoLogger, err := ui.StoLogger()
 	if err != nil {
@@ -136,35 +147,39 @@ func GetStore(cof config.SelefraConfig, provider *config.ProviderRequired) (*pos
 	return store, nil
 }
 
-func GetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, key string) (string, error) {
-	store, err := GetStore(cof, provider)
+func GetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, conf, key string) (string, error) {
+	store, err := GetStore(cof, provider, conf)
 	if err != nil {
 		return "", err
 	}
 	t, diag := store.GetValue(context.Background(), key)
-	if diag != nil && diag.HasError() {
+	if diag != nil {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return "", err
+		if err != nil {
+			return "", err
+		}
 	}
 	return t, nil
 }
 
-func SetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, key, value string) error {
-	store, err := GetStore(cof, provider)
+func SetStoreValue(cof config.SelefraConfig, provider *config.ProviderRequired, conf string, key, value string) error {
+	store, err := GetStore(cof, provider, conf)
 	if err != nil {
 		return err
 	}
 	diag := store.SetKey(context.Background(), key, value)
-	if diag != nil && diag.HasError() {
+	if diag != nil {
 		err := ui.PrintDiagnostic(diag.GetDiagnosticSlice())
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
+func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig, conf string) (bool, error) {
 	requireKey := config.GetCacheKey()
-	t, err := GetStoreValue(cof, &required, requireKey)
+	t, err := GetStoreValue(cof, &required, conf, requireKey)
 	if err != nil {
 		return true, err
 	}
@@ -172,7 +187,8 @@ func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool
 	if err != nil {
 		return true, err
 	}
-	cp, err := cof.GetProvider(required.Name)
+	var cp config.CliProviders
+	err = yaml.Unmarshal([]byte(conf), &cp)
 	if err != nil {
 		return true, err
 	}
@@ -183,60 +199,6 @@ func NeedFetch(required config.ProviderRequired, cof config.SelefraConfig) (bool
 	if time.Now().Sub(fetchTime) > duration {
 		return true, nil
 	}
-	return false, nil
-}
-
-func Lock(ctx context.Context, provider config.ProviderRequired, cof config.SelefraConfig) error {
-	requireKey := config.GetLockKey()
-	var err error
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			Unlock(provider, cof)
-			return ctx.Err()
-		case <-ticker.C:
-			time := time.Now().Format(time.RFC3339)
-			err = SetStoreValue(cof, &provider, requireKey, time)
-			if err != nil {
-				return err
-			}
-			err = SetStoreValue(cof, &provider, time, "true")
-			if err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func Unlock(provider config.ProviderRequired, cof config.SelefraConfig) error {
-	requireKey := config.GetLockKey()
-	timeLock, err := GetStoreValue(cof, &provider, requireKey)
-	if err != nil {
-		return err
-	}
-	return SetStoreValue(cof, &provider, timeLock, "false")
-}
-
-func Locked(required config.ProviderRequired, cof config.SelefraConfig) (bool, error) {
-	requireKey := config.GetLockKey()
-	t, err := GetStoreValue(cof, &required, requireKey)
-	if err != nil {
-		return false, err
-	}
-	lockingTime, err := time.ParseInLocation(time.RFC3339, t, time.Local)
-	if err != nil {
-		return false, err
-	}
-	deadLock, err := parseDuration("1m")
-	lockValue, err := GetStoreValue(cof, &required, t)
-	if lockValue == "true" && time.Now().Sub(lockingTime) < deadLock {
-		return true, nil
-	}
-	time := time.Now().Format(time.RFC3339)
-	err = SetStoreValue(cof, &required, t, "true")
-	err = SetStoreValue(cof, &required, requireKey, time)
 	return false, nil
 }
 
