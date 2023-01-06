@@ -182,7 +182,7 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 				ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
 			}
 		}
-		success = int(res.TableCount)
+		success = len(res.FinishedTables)
 		errorsN = int(int64(res.TableCount) - int64(len(res.FinishedTables)))
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
