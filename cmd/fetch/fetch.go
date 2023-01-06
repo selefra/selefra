@@ -179,12 +179,11 @@ func Fetch(ctx context.Context, cof *config.SelefraConfig, p *config.ProviderReq
 		total = int64(res.TableCount)
 		if res.Diagnostics != nil {
 			if res.Diagnostics.HasError() {
-				errorsN++
 				ui.SaveLogToDiagnostic(res.Diagnostics.GetDiagnosticSlice())
-			} else {
-				success++
 			}
 		}
+		success = int(res.TableCount)
+		errorsN = int(int64(res.TableCount) - int64(len(res.FinishedTables)))
 	}
 	progbar.Wait(p.Name + "@" + p.Version)
 	if errorsN > 0 {
