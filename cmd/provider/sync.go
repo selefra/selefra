@@ -125,6 +125,9 @@ func Sync() (errLogs []string, lockSlice []lockStruct, err error) {
 			})
 			need, _ := tools.NeedFetch(*p, *cof, conf)
 			if !need {
+				ui.PrintSuccessF("%s %s@%s pull infrastructure data:\n", cp.Name, p.Name, p.Version)
+				ui.PrintCustomizeLnNotShow(fmt.Sprintf("Pulling %s@%s Please wait for resource information ...", p.Name, p.Version))
+				ui.PrintSuccessF("	%s@%s all ready use cache!\n", p.Name, p.Version)
 				continue
 			}
 			err = fetch.Fetch(ctx, cof, p, conf)
