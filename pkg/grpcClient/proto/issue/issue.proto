@@ -23,6 +23,7 @@ message Req {
   string token = 5;
   string projectName = 6;
   string taskUUID =7;
+  string Schema = 8;
 }
 
 message Res {

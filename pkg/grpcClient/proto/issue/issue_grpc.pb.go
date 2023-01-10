@@ -131,5 +131,5 @@ var Issue_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "pkg/grpcClient/proto/issue.proto",
+	Metadata: "pkg/grpcClient/proto/issue/issue.proto",
 }
