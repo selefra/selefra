@@ -243,9 +243,12 @@ func getSqlTables(sql string, tableMap map[string]bool) (tables []string) {
 	return tables
 }
 
-func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req) {
+func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req, ticker *time.Ticker) {
 	inClient := grpcClient.Cli.GetIssueUploadIssueStreamClient()
 	for {
+		if ticker != nil {
+			ticker.Reset(30 * time.Second)
+		}
 		select {
 		case req := <-IssueReq:
 			if inClient == nil {
@@ -256,17 +259,12 @@ func UploadIssueFunc(ctx context.Context, IssueReq <-chan *issue.Req) {
 				ui.PrintErrorF("send issue to server error: %s", err.Error())
 				return
 			}
-		case <-time.After(time.Second * 30):
-			ui.PrintErrorF("send issue to server error: timeout")
-			if inClient != nil {
-				inClient.CloseSend()
-			}
-			return
 		case <-ctx.Done():
 			if inClient != nil {
 				inClient.CloseSend()
+				ui.PrintInfoLn("End of reporting issue")
+				return
 			}
-			return
 		}
 	}
 }
@@ -275,7 +273,17 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 	issueCtx, issueCancel := context.WithCancel(context.Background())
 	defer issueCancel()
 	issueChan := make(chan *issue.Req, 100)
-	go UploadIssueFunc(issueCtx, issueChan)
+	ticker := time.NewTicker(30 * time.Second)
+	go func() {
+		<-ticker.C
+		ui.PrintErrorLn("Report issue timeout")
+		_, _ = grpcClient.Cli.UploadLogStatus()
+		issueCancel()
+		panic("Report issue timeout")
+		return
+	}()
+
+	go UploadIssueFunc(issueCtx, issueChan, ticker)
 	for _, rule := range rules {
 		var variablesMap = make(map[string]interface{})
 		for i := range s.Variables {
@@ -402,8 +410,14 @@ func RunRules(ctx context.Context, s config.SelefraConfig, c *client.Client, pro
 					ProjectName: project,
 					TaskUUID:    grpcClient.Cli.GetTaskID(),
 					Token:       grpcClient.Cli.GetToken(),
+					Schema:      schema,
 				}
-				issueChan <- &reqs
+				select {
+				case <-issueCtx.Done():
+					return nil
+				default:
+					issueChan <- &reqs
+				}
 			}
 		}
 	}
