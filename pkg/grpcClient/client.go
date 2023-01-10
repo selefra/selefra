@@ -39,9 +39,9 @@ func (g *grpcCli) getStatus() string {
 
 func (g *grpcCli) getDial() string {
 	var dialMap = make(map[string]string)
-	dialMap["dev-api.selefra.io"] = "dev-tcp.selefra.io:1234"
-	dialMap["main-api.selefra.io"] = "main-tcp.selefra.io:1234"
-	dialMap["pre-api.selefra.io"] = "pre-tcp.selefra.io:1234"
+	dialMap["dev-api.selefra.io"] = "selefra-cloud-api-svc.selefra-cloud-dev:1234"
+	dialMap["main-api.selefra.io"] = "selefra-cloud-api-svc.selefra-cloud-main:1234"
+	dialMap["pre-api.selefra.io"] = "selefra-cloud-api-svc.selefra-cloud-pre:1234"
 	if dialMap[global.SERVER] != "" {
 		return dialMap[global.SERVER]
 	}

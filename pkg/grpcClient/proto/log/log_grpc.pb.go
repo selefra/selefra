@@ -231,5 +231,5 @@ var Log_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "proto/log/log.proto",
+	Metadata: "pkg/grpcClient/proto/log/log.proto",
 }

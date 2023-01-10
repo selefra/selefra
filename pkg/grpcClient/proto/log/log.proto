@@ -30,7 +30,7 @@ message ConnectMsg {
 message StatusInfo {
   BaseConnectionInfo BaseInfo = 1;
   string Stag = 2;
-  string Status = 3;  // 开始，成功，失败
+  string Status = 3;
   google.protobuf.Timestamp Time = 4;
 }
 
